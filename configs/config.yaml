@@ -1,0 +1,8 @@
+server:
+  port: ":8082"
+service:
+  name: "oms_service"
+mongo:
+  uri: "mongodb://localhost:27017"
+  dbname: "OMS"
+  collectionName: "orders"

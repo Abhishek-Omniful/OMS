@@ -1,18 +1,29 @@
 package main
 
 import (
-	"github.com/omniful/go_commons/log"
+	"log"
+
+	"github.com/Abhishek-Omniful/OMS/mycontext"
+	"github.com/Abhishek-Omniful/OMS/pkg/router"
+	"github.com/omniful/go_commons/config"
+	"github.com/omniful/go_commons/http"
 )
 
 func main() {
+	ctx := mycontext.GetContext()
 
-	log.Infof("OMS service is starting up...")
+	server := http.InitializeServer(
+		config.GetString(ctx, "server.port"),            // Port to listen
+		config.GetDuration(ctx, "server.read_timeout"),  // Read timeout
+		config.GetDuration(ctx, "server.write_timeout"), // Write timeout
+		config.GetDuration(ctx, "server.idle_timeout"),  // Idle timeout
+		false,
+	)
 
-	// Example logs at various levels
-	log.Debugf("This is a debug message: %v", "debug-info")
-	log.Warnf("This is a warning!")
-	log.Errorf("This is an error log with code %d", 500)
+	router.Initialize(server)
+	err := server.StartServer(config.GetString(ctx, "server.name"))
+	if err != nil {
+		log.Fatal("Failed to start server: ", err)
+	}
 
-	// Normally you'd start server / worker here
-	// server.Start()
 }
