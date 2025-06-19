@@ -6,7 +6,6 @@ import (
 
 	"github.com/Abhishek-Omniful/OMS/mycontext"
 	"github.com/Abhishek-Omniful/OMS/pkg/appinit"
-	"github.com/Abhishek-Omniful/OMS/pkg/helper"
 	"github.com/gin-gonic/gin"
 	"github.com/omniful/go_commons/config"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -25,7 +24,7 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	collection, err = helper.GetMongoCollection(dbname, collectionName)
+	collection, err = appinit.GetMongoCollection(dbname, collectionName)
 	if err != nil {
 		log.Fatal(err)
 	}

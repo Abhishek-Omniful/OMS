@@ -7,6 +7,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+type BulkOrderRequest struct {
+	SellerID string `json:"sellerID"`
+	FilePath string `json:"filePath"`
+}
+
 var mongoClinet *mongo.Client
 var err error
 

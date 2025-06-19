@@ -6,3 +6,13 @@ mongo:
   uri: "mongodb://localhost:27017"
   dbname: "OMS"
   collectionName: "orders"
+
+s3:
+ bucketName: "oms-test-bucket"
+ fileName: "orders.csv"
+
+aws:
+  region: "us-east-1"
+  accessKeyId: "test"
+  secretAccessKey: "test"
+  s3Endpoint: "http://localhost:4566"

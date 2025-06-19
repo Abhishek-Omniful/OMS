@@ -28,11 +28,20 @@ func connectDB() (*mongo.Client, error) {
 	return client, nil
 }
 
-func GetDB() (*mongo.Client,error) {
+func GetDB() (*mongo.Client, error) {
 	mongoClient, err := connectDB()
 	if err != nil {
 		log.Fatal(err)
-		return nil,err
+		return nil, err
 	}
-	return mongoClient,nil
+	return mongoClient, nil
+}
+
+func GetMongoCollection(dbname string, collectionName string) (*mongo.Collection, error) {
+	mongoClient, err := GetDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+	collection := mongoClient.Database(dbname).Collection(collectionName)
+	return collection, err
 }

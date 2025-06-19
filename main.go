@@ -9,6 +9,11 @@ import (
 	"github.com/omniful/go_commons/http"
 )
 
+func init() {
+	// below will run only once to push file to s3
+	// appinit.UploadToLocalStack()
+}
+
 func main() {
 	ctx := mycontext.GetContext()
 
