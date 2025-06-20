@@ -1,8 +1,8 @@
 package router
 
 import (
-	"github.com/omniful/go_commons/http"
 	"github.com/Abhishek-Omniful/OMS/pkg/controllers"
+	"github.com/omniful/go_commons/http"
 )
 
 func Initialize(s *http.Server) {
@@ -11,9 +11,14 @@ func Initialize(s *http.Server) {
 
 	v1 := s.Engine.Group("/api/v1")
 	{
-		orders := v1.Group("/order")
+		orders := v1.Group("/order") //containing csv file path
 		{
 			orders.POST("/bulkorder", controllers.CreateBulkOrder)
+		}
+
+		csv := v1.Group("/csv")
+		{
+			csv.POST("/filepath", controllers.StoreInS3)
 		}
 	}
 }

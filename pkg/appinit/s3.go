@@ -1,13 +1,11 @@
 package appinit
 
 import (
-	"bytes"
 	"log"
 
-	"github.com/Abhishek-Omniful/OMS/mycontext"
 	"github.com/Abhishek-Omniful/OMS/pkg/helper"
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/omniful/go_commons/config"
+
 	"github.com/omniful/go_commons/s3"
 )
 
@@ -27,28 +25,7 @@ func GetS3Client() *awsS3.Client {
 	return client
 }
 
-func getLocalCSV() []byte {
-	fileBytes, _ := helper.GetLocalCSV()
+func GetLocalCSV(filepath string) []byte {
+	fileBytes, _ := helper.GetLocalCSV(filepath)
 	return fileBytes
-}
-
-func UploadToLocalStack() {
-	client := GetS3Client()
-	ctx := mycontext.GetContext()
-	fileBytes := getLocalCSV()
-
-	bucketName := config.GetString(ctx, "s3.bucketName")
-	filename := config.GetString(ctx, "s3.fileName")
-
-	input := &awsS3.PutObjectInput{
-		Bucket: &bucketName,
-		Key:    &filename,
-		Body:   bytes.NewReader(fileBytes),
-	}
-
-	_, err := client.PutObject(ctx, input)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println(" File uploaded to S3!")
 }

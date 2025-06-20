@@ -5,8 +5,8 @@ import (
 	"os"
 )
 
-func GetLocalCSV() ([]byte, error) {
-	filePath := "C:/Users/Abhishek/Desktop/orders.csv"
+func GetLocalCSV(filepath string) ([]byte, error) {
+	filePath := filepath
 	fileBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Fatal(err)

@@ -1,0 +1,7 @@
+package appinit
+
+
+func QueueInit(){
+	
+}
+
