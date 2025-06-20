@@ -43,5 +43,6 @@ func GetMongoCollection(dbname string, collectionName string) (*mongo.Collection
 		log.Fatal(err)
 	}
 	collection := mongoClient.Database(dbname).Collection(collectionName)
+	log.Printf("Connected to MongoDB collection: %s in database: %s", collectionName, dbname)
 	return collection, err
 }

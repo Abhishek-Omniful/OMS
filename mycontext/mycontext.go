@@ -22,6 +22,7 @@ func init() {
 	if err != nil {
 		log.Panicf("Failed to create context: %v", err)
 	}
+	log.Println("Context initialized successfully")
 }
 
 func GetContext() context.Context {
