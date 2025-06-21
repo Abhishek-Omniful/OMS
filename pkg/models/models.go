@@ -111,6 +111,7 @@ import (
 	"github.com/Abhishek-Omniful/OMS/pkg/appinit"
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/omniful/go_commons/config"
+	"github.com/omniful/go_commons/sqs"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -128,17 +129,18 @@ var err error
 var client *awsS3.Client //  this is being returned to me by s3.NewDefaultAWSS3Client() of gocommons
 var ctx context.Context
 var collection *mongo.Collection
+var publisher *sqs.Publisher // Publisher for SQS messages
 
 func init() {
 	ctx = mycontext.GetContext()
 	dbname := config.GetString(ctx, "mongo.dbname")
 	collectionName := config.GetString(ctx, "mongo.collectionName")
-    
+
 	// Initialize MongoDB client and collection
-	_, err = appinit.GetDB()
-	if err != nil {
-		log.Fatal(err)
-	}
+	// _, err = appinit.GetDB()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 	collection, err = appinit.GetMongoCollection(dbname, collectionName)
 	if err != nil {
 		log.Fatal(err)
@@ -146,8 +148,8 @@ func init() {
 	// Initialize S3 client
 	client = appinit.GetS3Client()
 
-     appinit.GetSqs()                   // Initialize SQS client
-	// publisher = appinit.GetPublisher() // Initialize Publisher
+	newQueue := appinit.GetSqs()                   // Initialize SQS client
+	publisher = appinit.GetPublisher(newQueue) // Initialize Publisher
 }
 
 func StoreInS3(s *StoreCSV) error {
@@ -164,6 +166,7 @@ func StoreInS3(s *StoreCSV) error {
 
 	_, err := client.PutObject(ctx, input)
 	if err != nil {
+		log.Println(err)
 		return errors.New("failed to upload to s3")
 	}
 	log.Println("File uploaded to S3!")

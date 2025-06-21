@@ -6,14 +6,13 @@ import (
 	"github.com/omniful/go_commons/sqs"
 )
 
-func PublisherInit() *sqs.Publisher {
+func PublisherInit(newQueue *sqs.Queue) *sqs.Publisher {
 	log.Println("Initializing SQS Publisher")
-	newQueue := GetSqs()
 	publisher := sqs.NewPublisher(newQueue)
 	log.Println("SQS Publisher successfully created")
 	return publisher
 }
 
-func GetPublisher() *sqs.Publisher {
-	return PublisherInit()
+func GetPublisher(newQueue *sqs.Queue) *sqs.Publisher {
+	return PublisherInit(newQueue)
 }
