@@ -1,6 +1,54 @@
-version: "3.8"
+# version: "3.8"
+
+# services:
+#   localstack:
+#     image: localstack/localstack
+#     container_name: shared-localstack
+#     ports:
+#       - "4566:4566" 
+#     environment:
+#       - SERVICES=s3,sqs,sns,dynamodb
+#       - DEBUG=1
+#     volumes:
+#       - "./localstack:/var/lib/localstack"
+
 
 services:
+  # Zookeeper
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: shared-zookeeper
+    ports:
+      - "2180:2181"
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+
+  # Kafka 
+  kafka-oms:
+    image: bitnami/kafka:latest
+    container_name: kafka-oms
+    ports:
+      - "9090:9092" 
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9090
+      KAFKA_CFG_ZOOKEEPER_CONNECT: shared-zookeeper:2181
+    depends_on:
+      - zookeeper
+
+  # MongoDB
+  mongodb:
+    image: mongo:6
+    container_name: shared-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: oms
+
+  # LocalStack
   localstack:
     image: localstack/localstack
     container_name: shared-localstack
@@ -11,3 +59,6 @@ services:
       - DEBUG=1
     volumes:
       - "./localstack:/var/lib/localstack"
+
+volumes:
+  mongodb_data:

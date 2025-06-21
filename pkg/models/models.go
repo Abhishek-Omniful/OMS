@@ -105,12 +105,13 @@ import (
 	"context"
 	"errors"
 	"log"
-	"os"
+
 	"strings"
 
 	"github.com/Abhishek-Omniful/OMS/mycontext"
 	"github.com/Abhishek-Omniful/OMS/pkg/appinit"
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
+	"encoding/json"
 	"github.com/omniful/go_commons/config"
 	"github.com/omniful/go_commons/sqs"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -151,11 +152,12 @@ func init() {
 func StoreInS3(s *StoreCSV) error {
 	filepath := s.FilePath
 	fileBytes := appinit.GetLocalCSV(filepath)
-	// bucketName := config.GetString(ctx, "s3.bucketName")
-	// filename := config.GetString(ctx, "s3.fileName")
 
-	bucketName := os.Getenv("S3_BUCKETNAME")
-	filename := os.Getenv("S3_FILENAME")
+	bucketName := config.GetString(ctx, "s3.bucketName")
+	filename := config.GetString(ctx, "s3.fileName")
+
+	// bucketName := os.Getenv("S3_BUCKETNAME")
+	// filename := os.Getenv("S3_FILENAME")
 
 	input := &awsS3.PutObjectInput{
 		Bucket: &bucketName,
@@ -165,7 +167,7 @@ func StoreInS3(s *StoreCSV) error {
 
 	_, err := client.PutObject(ctx, input)
 	if err != nil {
-		log.Println("here is error")
+		//log.Println("here is error1")
 		log.Println(err)
 		return errors.New("failed to upload to s3")
 	}
@@ -198,8 +200,33 @@ func ValidateS3Path(req *BulkOrderRequest) error {
 	//log.Println(location)
 
 	if err != nil {
+		log.Println(err)
 		return errors.New("file does not exist at specified S3 path")
 	}
 
+	return nil
+}
+
+func PushToSQS(req *BulkOrderRequest) error {
+
+	messageBytes, err := json.Marshal(req)
+	if err != nil {
+		log.Println("Failed to marshal request to JSON:", err)
+		return err
+	}
+
+	// Create a message to send to SQS
+	newMessage := &sqs.Message{
+		Value: messageBytes,
+	}
+
+	// Publish the message to SQS
+	err = publisher.Publish(ctx, newMessage)
+	if err != nil {
+		log.Println("Failed to publish message to SQS:", err)
+		return err
+	}
+
+	log.Println("Message successfully published to SQS")
 	return nil
 }

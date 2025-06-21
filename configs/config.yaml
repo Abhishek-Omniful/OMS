@@ -14,7 +14,7 @@ mongo:
   collectionName: "orders"
 
 s3:
- bucketName: "oms-test-bucket"
+ bucketName: "oms-temp-public"
  fileName: "orders.csv"
 
 # aws:
