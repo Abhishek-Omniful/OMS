@@ -105,6 +105,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/Abhishek-Omniful/OMS/mycontext"
@@ -136,11 +137,6 @@ func init() {
 	dbname := config.GetString(ctx, "mongo.dbname")
 	collectionName := config.GetString(ctx, "mongo.collectionName")
 
-	// Initialize MongoDB client and collection
-	// _, err = appinit.GetDB()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
 	collection, err = appinit.GetMongoCollection(dbname, collectionName)
 	if err != nil {
 		log.Fatal(err)
@@ -148,15 +144,18 @@ func init() {
 	// Initialize S3 client
 	client = appinit.GetS3Client()
 
-	newQueue := appinit.GetSqs()                   // Initialize SQS client
+	newQueue := appinit.GetSqs()               // Initialize SQS client
 	publisher = appinit.GetPublisher(newQueue) // Initialize Publisher
 }
 
 func StoreInS3(s *StoreCSV) error {
 	filepath := s.FilePath
 	fileBytes := appinit.GetLocalCSV(filepath)
-	bucketName := config.GetString(ctx, "s3.bucketName")
-	filename := config.GetString(ctx, "s3.fileName")
+	// bucketName := config.GetString(ctx, "s3.bucketName")
+	// filename := config.GetString(ctx, "s3.fileName")
+
+	bucketName := os.Getenv("S3_BUCKETNAME")
+	filename := os.Getenv("S3_FILENAME")
 
 	input := &awsS3.PutObjectInput{
 		Bucket: &bucketName,
@@ -166,6 +165,7 @@ func StoreInS3(s *StoreCSV) error {
 
 	_, err := client.PutObject(ctx, input)
 	if err != nil {
+		log.Println("here is error")
 		log.Println(err)
 		return errors.New("failed to upload to s3")
 	}
@@ -189,9 +189,11 @@ func ValidateS3Path(req *BulkOrderRequest) error {
 	bucket := parts[0]
 	key := parts[1]
 
+	log.Println(bucket, key)
+
 	_, err := client.HeadObject(ctx, &awsS3.HeadObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
+		Bucket: &bucket, //bucket name
+		Key:    &key,    // file name
 	})
 	//log.Println(location)
 

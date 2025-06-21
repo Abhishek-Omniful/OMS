@@ -1,5 +1,9 @@
 server:
   port: ":8082"
+  read_timeout: 10s
+  write_timeout: 10s
+  idle_timeout: 70s
+  name: "oms_service"
 
 service:
   name: "oms_service"
