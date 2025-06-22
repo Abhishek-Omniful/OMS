@@ -11,7 +11,7 @@ import (
 
 var newQueue *sqs.Queue
 
-func queueInit() *sqs.Queue {
+func SQSInit() {
 
 	log.Println("Initializing SQS Queue")
 
@@ -39,7 +39,7 @@ func queueInit() *sqs.Queue {
 	err := sqs.CreateQueue(ctx, sqsCfg, queueName, "standard")
 	if err != nil {
 		log.Fatal("Error creating SQS queue:", err)
-		return nil
+		return 
 	}
 
 	newQueue, err = sqs.NewStandardQueue(ctx, queueName, sqsCfg)
@@ -49,13 +49,9 @@ func queueInit() *sqs.Queue {
 	}
 
 	log.Println("Standard SQS Queue Successfully created")
-	return newQueue
 }
 
 func GetSqs() *sqs.Queue {
-	return queueInit()
+	return newQueue
 }
 
-// func init() {
-// 	newQueue = queueInit()
-// }

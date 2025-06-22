@@ -205,6 +205,6 @@ func CreateBulkOrder(c *gin.Context) {
 	})
 
 	//push message to sqs
-	models.PushToSQS(req)
+//	models.PushToSQS(req)
 
 }

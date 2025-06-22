@@ -10,38 +10,32 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-func connectDB() (*mongo.Client, error) {
+var mongoClient *mongo.Client
+var err error
+
+func ConnectDB() {
 	ctx := mycontext.GetContext()
 	log.Println("Connecting to MongoDB")
 	mongoURI := config.GetString(ctx, "mongo.uri")
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
+	mongoClient, err = mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		log.Fatal(err)
-		return nil, err
+		return
 	}
-	err = client.Ping(ctx, readpref.Primary())
+	err = mongoClient.Ping(ctx, readpref.Primary())
 	if err != nil {
 		log.Fatal(err)
-		return nil, err
+		return
 	}
 	log.Println("Connected to MongoDB successfully")
-	return client, nil
 }
 
-func GetDB() (*mongo.Client, error) {
-	mongoClient, err := connectDB()
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
-	return mongoClient, nil
+func GetDB() *mongo.Client {
+	return mongoClient
 }
 
 func GetMongoCollection(dbname string, collectionName string) (*mongo.Collection, error) {
-	mongoClient, err := GetDB()
-	if err != nil {
-		log.Fatal(err)
-	}
+	mongoClient := GetDB()
 	collection := mongoClient.Database(dbname).Collection(collectionName)
 	log.Printf("Connected to MongoDB collection: %s in database: %s", collectionName, dbname)
 	return collection, err

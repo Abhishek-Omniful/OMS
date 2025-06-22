@@ -9,20 +9,22 @@ import (
 	"github.com/omniful/go_commons/s3"
 )
 
-func connectS3() (*awsS3.Client, error) {
+var s3Client *awsS3.Client
+
+func ConnectS3() {
 	//s3client creation
+
 	log.Println("Connecting to s3")
-	s3Client, err := s3.NewDefaultAWSS3Client()
+	s3Client, err = s3.NewDefaultAWSS3Client()
 	if err != nil {
-		return nil, err
+		log.Fatal("Error connecting to s3:", err)
+		return
 	}
 	log.Println("Successfully Connected to s3")
-	return s3Client, nil
 }
 
 func GetS3Client() *awsS3.Client {
-	client, _ := connectS3()
-	return client
+	return s3Client
 }
 
 func GetLocalCSV(filepath string) []byte {
