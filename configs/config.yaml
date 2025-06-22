@@ -37,8 +37,16 @@ aws:
 client:
   serviceName: "ims-service"
   baseURL: "http://localhost:8080"
-  MaxIdleConns: 100
-  MaxIdleConnsPerHost: 100
+  maxIdleConns: 100
+  maxIdleConnsPerHost: 100
 
 http:
   timeout: 30s
+
+consumer:
+  numberOfWorker: 1
+  concurrencyPerWorker: 1
+  maxMessagesCount: 10
+  visibilityTimeout: 30   # in seconds
+  isAsync: false
+  sendBatchMessage: false

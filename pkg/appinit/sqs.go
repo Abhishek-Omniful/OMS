@@ -39,7 +39,7 @@ func SQSInit() {
 	err := sqs.CreateQueue(ctx, sqsCfg, queueName, "standard")
 	if err != nil {
 		log.Fatal("Error creating SQS queue:", err)
-		return 
+		return
 	}
 
 	newQueue, err = sqs.NewStandardQueue(ctx, queueName, sqsCfg)
@@ -54,4 +54,3 @@ func SQSInit() {
 func GetSqs() *sqs.Queue {
 	return newQueue
 }
-

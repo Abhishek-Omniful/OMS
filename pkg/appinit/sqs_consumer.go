@@ -7,27 +7,38 @@ import (
 	"os"
 	"path/filepath"
 
-	parse_csv "github.com/Abhishek-Omniful/OMS/pkg/parseCSV"
+	"github.com/Abhishek-Omniful/OMS/mycontext"
+	// parse_csv "github.com/Abhishek-Omniful/OMS/pkg/helper"
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/aws/aws-sdk-go/aws"
 
+	"github.com/omniful/go_commons/config"
 	"github.com/omniful/go_commons/sqs"
 )
 
 var consumer *sqs.Consumer
 
-func ConsumerInit() {
+func InitConsumer() {
 	sqsQueue := GetSqs()
+	ctx := mycontext.GetContext()
+
+	numberOfWorker := config.GetUint64(ctx, "consumer.numberOfWorker")
+	concurrencyPerWorker := config.GetUint64(ctx, "consumer.concurrencyPerWorker")
+	maxMessagesCount := config.GetInt64(ctx, "consumer.maxMessagesCount")
+	visibilityTimeout := config.GetInt64(ctx, "consumer.visibilityTimeout")
+	isAsync := config.GetBool(ctx, "consumer.isAsync")
+	sendBatchMessage := config.GetBool(ctx, "consumer.sendBatchMessage")
+
 	consumer, err = sqs.NewConsumer(
 		sqsQueue,
-		1,
-		1,
+		numberOfWorker,
+		concurrencyPerWorker,
 		&queueHandler{}, // defined below
-		10,
-		30,
-		false, // isAsync
-		false, // sendBatchMessage
+		maxMessagesCount,
+		visibilityTimeout,
+		isAsync,
+		sendBatchMessage,
 	)
 
 	if err != nil {
@@ -105,7 +116,7 @@ func (h *queueHandler) Process(ctx context.Context, msgs *[]sqs.Message) error {
 		logger.Infof("Starting to parse CSV file: %s", tmpFile)
 
 		// Parse the CSV file
-		err = parse_csv.ParseCSV(tmpFile, ctx, logger, collection)
+		err = ParseCSV(tmpFile, ctx, logger, collection)
 		if err != nil {
 			logger.Errorf("failed to parse CSV file: %v", err)
 			continue

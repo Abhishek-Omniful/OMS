@@ -3,7 +3,8 @@ package appinit
 import (
 	"log"
 
-	"github.com/Abhishek-Omniful/OMS/pkg/helper"
+	"os"
+
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/omniful/go_commons/s3"
@@ -28,6 +29,10 @@ func GetS3Client() *awsS3.Client {
 }
 
 func GetLocalCSV(filepath string) []byte {
-	fileBytes, _ := helper.GetLocalCSV(filepath)
+	fileBytes, err := os.ReadFile(filepath)
+	if err != nil {
+		log.Fatal(err)
+		return nil
+	}
 	return fileBytes
 }

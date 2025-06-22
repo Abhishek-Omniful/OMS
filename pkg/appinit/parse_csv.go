@@ -1,4 +1,4 @@
-package parse_csv
+package appinit
 
 import (
 	"context"
@@ -28,22 +28,25 @@ type Order struct {
 }
 type ValidationResponse struct {
 	IsValid bool
-	Error   error
+	Error   string
 }
 
 var client *http.Client
-var err error
 
 func init() {
 	// Initialize client with base URL
-	transport := &nethttp.Transport{
-		MaxIdleConns:        100,
-		MaxIdleConnsPerHost: 100,
-	}
 	ctx := mycontext.GetContext()
 	serviceName := config.GetString(ctx, "client.serviceName")
 	baseURL := config.GetString(ctx, "client.baseURL")
 	timeout := config.GetDuration(ctx, "http.timeout")
+	maxIdleConns := config.GetInt(ctx, "client.maxIdleConns")
+	maxIdleConnsPerHost := config.GetInt(ctx, "client.maxIdleConnsPerHost")
+
+	transport := &nethttp.Transport{
+		MaxIdleConns:        maxIdleConns,
+		MaxIdleConnsPerHost: maxIdleConnsPerHost,
+	}
+
 	client, err = http.NewHTTPClient(
 		serviceName, // client service name
 		baseURL,     // base URL
@@ -54,7 +57,7 @@ func init() {
 
 func ValidateWithIMS(hubID, skuID int64) bool {
 	req := &http.Request{
-		Url: fmt.Sprintf("/api/v1/validators/validate_order/%d/%d", hubID, skuID),
+		Url: fmt.Sprintf("/api/v1/validators/validate_order/%d/%d", skuID, hubID),
 		Headers: map[string][]string{
 			"Content-Type": {"application/json"},
 		},
@@ -66,8 +69,10 @@ func ValidateWithIMS(hubID, skuID int64) bool {
 		log.Errorf("Failed to call IMS validate API: %v", err)
 		return false
 	}
+	log.Println("Response from IMS validate API:", response)
 	return response.IsValid
 }
+
 func ValidateOrder(order *Order) error {
 	if order.OrderID <= 0 {
 		return errors.New("invalid OrderID")
@@ -89,6 +94,7 @@ func ValidateOrder(order *Order) error {
 	}
 	//call the ims validate api for hubid and sku id from here
 	valid := ValidateWithIMS(order.HubID, order.SKUID)
+
 	if !valid {
 		return errors.New("invalid HubID or SKUID")
 	}
@@ -97,10 +103,12 @@ func ValidateOrder(order *Order) error {
 
 func saveOrder(ctx context.Context, order *Order, collection *mongo.Collection) error {
 	order.Status = "onHold" // Set default status
+	
 	_, err := collection.InsertOne(ctx, order)
 	if err != nil {
 		return fmt.Errorf("failed to insert order: %w", err)
 	}
+	log.Println("Order saved successfully:", order)
 	return nil
 }
 
@@ -150,40 +158,8 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 			break
 		}
 
-		// for _, row := range records {
-		// 	//  Print full row to terminal
-		// 	logger.Infof("CSV Row: %v", row)
-
-		// 	qtyIdx, okQty := colIdx["quantity"]
-		// 	priceIdx, okPrice := colIdx["price"]
-		// 	if !okQty || !okPrice || len(row) <= qtyIdx || len(row) <= priceIdx {
-		// 		invalid = append(invalid, row)
-		// 		continue
-		// 	}
-
-		// 	qty, err := strconv.Atoi(row[qtyIdx])
-		// 	if err != nil || qty <= 0 {
-		// 		invalid = append(invalid, row)
-		// 		continue
-		// 	}
-
-		// 	price, err := strconv.ParseFloat(row[priceIdx], 64)
-		// 	if err != nil || price < 0 {
-		// 		invalid = append(invalid, row)
-		// 		continue
-		// 	}
-		// }
-
 		for _, row := range records {
 			logger.Infof("CSV Row: %v", row)
-
-			// qtyStr := row[colIdx["quantity"]]
-			// qty, err := strconv.Atoi(qtyStr)
-			// if err != nil || qty <= 0 {
-			// 	logger.Warnf("Invalid quantity: %v", qtyStr)
-			// 	invalid = append(invalid, row)
-			// 	continue
-			// }
 
 			orderID, _ := strconv.ParseInt(row[colIdx["order_id"]], 10, 64)
 			skuID, _ := strconv.ParseInt(row[colIdx["sku_id"]], 10, 64)
@@ -213,7 +189,9 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 				invalid = append(invalid, row)
 				continue
 			}
-			//publishOrderCreated(ctx, producer, order)
+			PublishOrder(&order)
+			// publishOrderCreated(ctx, producer, order)
+
 		}
 	}
 	return nil

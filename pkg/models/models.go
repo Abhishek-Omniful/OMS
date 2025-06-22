@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"strings"
 
@@ -61,8 +62,17 @@ func init() {
 	appinit.PublisherInit(newQueue)    // Initialize SQS Publisher
 	publisher = appinit.GetPublisher() // get Publisher
 
-	appinit.ConsumerInit()     // Initialize SQS Consumer
+	appinit.InitConsumer()     // Initialize SQS Consumer
 	appinit.StartConsumer(ctx) // Start the SQS consumer for processing CSV files
+
+	go appinit.InitKafkaConsumer() // Initialize Kafka Producer
+	//appinit.ReceiveOrder()
+	// Sleep to allow consumer to initialize
+	time.Sleep(3 * time.Second)
+
+	// Then produce messages
+	appinit.InitKafkaProducer()
+
 }
 
 func StoreInS3(s *StoreCSV) error {

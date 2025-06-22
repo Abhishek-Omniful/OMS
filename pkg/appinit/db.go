@@ -18,6 +18,7 @@ func ConnectDB() {
 	ctx := mycontext.GetContext()
 	log.Println("Connecting to MongoDB")
 	mongoURI := config.GetString(ctx, "mongo.uri")
+	log.Printf("MongoDB URI: %s", mongoURI)
 	mongoClient, err = mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		log.Fatal(err)
