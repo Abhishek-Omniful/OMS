@@ -22,18 +22,17 @@ type StoreCSV struct {
 }
 
 type BulkOrderRequest struct {
-	SellerID string `json:"sellerID"`
 	FilePath string `json:"filePath"`
 }
 
-// type OrderItem struct {
-// 	ID              string `bson:"_id,omitempty" json:"order_items_id"`
-// 	OrderID         string
-// 	SKUID           string `bson:"sku_id" json:"sku_id"`
-// 	QuantityOrdered int    `bson:"quantity_ordered" json:"quantity_ordered"`
-// 	HubID           string `bson:"hub_id" json:"hub_id"`
-// 	SellerID        string `bson:"seller_id" json:"seller_id"`
-// }
+type Order struct {
+	OrderID  int64   `json:"order_id" csv:"order_id"`
+	SKUID    int64   `json:"sku_id" csv:"sku_id"`
+	Quantity int     `json:"quantity" csv:"quantity"`
+	SellerID int64   `json:"seller_id" csv:"seller_id"`
+	HubID    int64   `json:"hub_id" csv:"hub_id"`
+	Price    float64 `json:"price" csv:"price"`
+}
 
 var mongoClinet *mongo.Client
 var err error
@@ -92,7 +91,7 @@ func StoreInS3(s *StoreCSV) error {
 	return nil
 }
 
-func ValidateS3Path(req *BulkOrderRequest) error {
+func ValidateS3Path_PushToSQS(req *BulkOrderRequest) error {
 	log.Println("Validating S3 path:")
 	filePath := req.FilePath
 
@@ -145,5 +144,6 @@ func PushToSQS(bucket string, key string) error {
 		log.Println("Failed to publish message to SQS:", err)
 		return err
 	}
+	log.Println("Message successfully published to SQS")
 	return nil
 }

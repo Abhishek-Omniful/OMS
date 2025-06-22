@@ -1,16 +1,3 @@
-# version: "3.8"
-
-# services:
-#   localstack:
-#     image: localstack/localstack
-#     container_name: shared-localstack
-#     ports:
-#       - "4566:4566" 
-#     environment:
-#       - SERVICES=s3,sqs,sns,dynamodb
-#       - DEBUG=1
-#     volumes:
-#       - "./localstack:/var/lib/localstack"
 
 
 services:

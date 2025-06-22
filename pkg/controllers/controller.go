@@ -189,7 +189,7 @@ func CreateBulkOrder(c *gin.Context) {
 		})
 		return
 	}
-	err = models.ValidateS3Path(req)
+	err = models.ValidateS3Path_PushToSQS(req)
 
 	if err != nil {
 		c.JSON(400, gin.H{
@@ -204,7 +204,5 @@ func CreateBulkOrder(c *gin.Context) {
 		"message": "Valid Path to s3 !",
 	})
 
-	//push message to sqs
-//	models.PushToSQS(req)
 
 }

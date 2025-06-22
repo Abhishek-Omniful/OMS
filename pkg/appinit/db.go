@@ -12,6 +12,7 @@ import (
 
 var mongoClient *mongo.Client
 var err error
+var collection *mongo.Collection
 
 func ConnectDB() {
 	ctx := mycontext.GetContext()
@@ -36,7 +37,7 @@ func GetDB() *mongo.Client {
 
 func GetMongoCollection(dbname string, collectionName string) (*mongo.Collection, error) {
 	mongoClient := GetDB()
-	collection := mongoClient.Database(dbname).Collection(collectionName)
+	collection = mongoClient.Database(dbname).Collection(collectionName)
 	log.Printf("Connected to MongoDB collection: %s in database: %s", collectionName, dbname)
 	return collection, err
 }

@@ -103,13 +103,14 @@ func (h *queueHandler) Process(ctx context.Context, msgs *[]sqs.Message) error {
 
 		logger.Infof("CSV data written to temp file: %s", tmpFile)
 		logger.Infof("Starting to parse CSV file: %s", tmpFile)
+
 		// Parse the CSV file
-		err = parse_csv.ParseCSV(tmpFile, ctx, logger)
+		err = parse_csv.ParseCSV(tmpFile, ctx, logger, collection)
 		if err != nil {
 			logger.Errorf("failed to parse CSV file: %v", err)
 			continue
 		}
-		logger.Infof("CSV file parsed successfully: %s", tmpFile)
+		logger.Infof("CSV file parsed successfully : %s", tmpFile)
 	}
 
 	return nil

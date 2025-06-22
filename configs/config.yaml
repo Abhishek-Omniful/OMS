@@ -34,3 +34,11 @@ aws:
   sqsendpoint: "http://localhost:4566"
   sqsname: "sqs-queue"
 
+client:
+  serviceName: "ims-service"
+  baseURL: "http://localhost:8080"
+  MaxIdleConns: 100
+  MaxIdleConnsPerHost: 100
+
+http:
+  timeout: 30s
