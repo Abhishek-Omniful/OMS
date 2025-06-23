@@ -14,6 +14,7 @@ import (
 	"github.com/omniful/go_commons/csv"
 	"github.com/omniful/go_commons/http"
 	"github.com/omniful/go_commons/log"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -53,9 +54,13 @@ func init() {
 		transport,
 		http.WithTimeout(timeout), // optional timeout
 	)
+	if err != nil {
+		logger.Errorf("Failed to initialize HTTP client: %v", err)
+	}
 }
 
 func ValidateWithIMS(hubID, skuID int64) bool {
+	// fmt.Println("2")
 	req := &http.Request{
 		Url: fmt.Sprintf("/api/v1/validators/validate_order/%d/%d", skuID, hubID),
 		Headers: map[string][]string{
@@ -64,16 +69,18 @@ func ValidateWithIMS(hubID, skuID int64) bool {
 		Timeout: 5 * time.Second,
 	}
 	var response ValidationResponse
+	// fmt.Println(response)
 	_, err := client.Get(req, &response)
 	if err != nil {
-		log.Errorf("Failed to call IMS validate API: %v", err)
+		logger.Errorf("Failed to call IMS validate API: %v", err)
 		return false
 	}
-	log.Println("Response from IMS validate API:", response)
+	logger.Infof("Response from IMS validate API: %v", response)
 	return response.IsValid
 }
 
 func ValidateOrder(order *Order) error {
+	// fmt.Println("1")
 	if order.OrderID <= 0 {
 		return errors.New("invalid OrderID")
 	}
@@ -101,14 +108,28 @@ func ValidateOrder(order *Order) error {
 	return nil
 }
 
-func saveOrder(ctx context.Context, order *Order, collection *mongo.Collection) error {
-	order.Status = "onHold" // Set default status
-	
-	_, err := collection.InsertOne(ctx, order)
-	if err != nil {
-		return fmt.Errorf("failed to insert order: %w", err)
+func SaveOrder(ctx context.Context, order *Order, collection *mongo.Collection) error {
+	filter := bson.M{
+		"hub_id": order.HubID,
+		"sku_id": order.SKUID,
 	}
-	log.Println("Order saved successfully:", order)
+
+	update := bson.M{
+		"$set": bson.M{"status": "new Order"},
+	}
+
+	result, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		logger.Errorf("Failed to update status: %v", err)
+		return err
+	}
+
+	if result.MatchedCount == 0 {
+		logger.Infof("No document found with hub_id=%d and sku_id=%d", order.HubID, order.SKUID)
+	} else {
+		logger.Infof("Order status updated for hub_id=%d and sku_id=%d", order.HubID, order.SKUID)
+	}
+
 	return nil
 }
 
@@ -182,9 +203,11 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 				invalid = append(invalid, row)
 				continue
 			}
+			logger.Infof("Order validated successfully: %+v", order)
+			order.Status = "onHold" // Set default status
 
 			// Save + Publish
-			if err := saveOrder(ctx, &order, collection); err != nil {
+			if err := SaveOrder(ctx, &order, collection); err != nil {
 				logger.Errorf("Save failed: %v", err)
 				invalid = append(invalid, row)
 				continue

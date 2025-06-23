@@ -28,15 +28,15 @@ services:
       - "9092:9092"
 
   # MongoDB
-  mongodb:
-    image: mongo:6
-    container_name: shared-mongodb
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    environment:
-      MONGO_INITDB_DATABASE: oms
+  # mongodb:
+  #   image: mongo:6
+  #   container_name: shared-mongodb
+  #   ports:
+  #     - "27017:27017"
+  #   volumes:
+  #     - mongodb_data:/data/db
+  #   environment:
+  #     MONGO_INITDB_DATABASE: oms
 
   # LocalStack
   localstack:
