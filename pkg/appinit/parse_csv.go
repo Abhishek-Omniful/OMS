@@ -217,5 +217,40 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 
 		}
 	}
+	if len(invalid) > 0 {
+		timestamp := time.Now().Format("20060102_150405")
+		filePath := fmt.Sprintf("public/invalid_orders_%s.csv", timestamp)
+
+		dest := &csv.Destination{}
+		dest.SetFileName(filePath)
+		dest.SetUploadDirectory("public/")
+		dest.SetRandomizedFileName(false)
+
+		writer, err := csv.NewCommonCSVWriter(
+			csv.WithWriterHeaders(headers),
+			csv.WithWriterDestination(*dest),
+		)
+		if err != nil {
+			logger.Errorf("failed to create CSV writer: %v", err)
+			return err
+		}
+		defer writer.Close(ctx)
+
+		if err := writer.Initialize(); err != nil {
+			logger.Errorf("failed to initialize CSV writer: %v", err)
+			return err
+		}
+
+		if err := writer.WriteNextBatch(invalid); err != nil {
+			logger.Errorf("failed to write invalid rows: %v", err)
+			return err
+		}
+
+		logger.Infof("Invalid rows saved to CSV at: %s", filePath)
+
+		publicURL := fmt.Sprintf("http://localhost:8082/%s", filePath)
+
+		logger.Infof("Download invalid CSV here: %s", publicURL)
+	}
 	return nil
 }
