@@ -16,6 +16,7 @@ import (
 	"github.com/omniful/go_commons/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Order struct {
@@ -115,21 +116,17 @@ func SaveOrder(ctx context.Context, order *Order, collection *mongo.Collection) 
 	}
 
 	update := bson.M{
-		"$set": bson.M{"status": "new Order"},
+		"$set": order, // Set full document (or use selective fields if needed)
 	}
 
-	result, err := collection.UpdateOne(ctx, filter, update)
+	opts := options.Update().SetUpsert(true) // Upsert = insert if not exists
+	_, err := collection.UpdateOne(ctx, filter, update, opts)
 	if err != nil {
-		logger.Errorf("Failed to update status: %v", err)
+		logger.Errorf("Failed to upsert order: %v", err)
 		return err
 	}
 
-	if result.MatchedCount == 0 {
-		logger.Infof("No document found with hub_id=%d and sku_id=%d", order.HubID, order.SKUID)
-	} else {
-		logger.Infof("Order status updated for hub_id=%d and sku_id=%d", order.HubID, order.SKUID)
-	}
-
+	logger.Infof("Order upserted successfully for hub_id=%d and sku_id=%d", order.HubID, order.SKUID)
 	return nil
 }
 
