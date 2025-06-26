@@ -11,7 +11,8 @@ service:
 mongo:
   uri: "mongodb://localhost:27017"
   dbname: "OMS"
-  collectionName: "orders"
+  ordersCollection: "orders"
+  webhooksCollection: "webhooks"
 
 s3:
  bucketName: "oms-temp-public"

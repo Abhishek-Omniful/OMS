@@ -206,3 +206,38 @@ func CreateBulkOrder(c *gin.Context) {
 
 
 }
+
+
+func CreateWebhook(c *gin.Context) {
+	var req = &models.Webhook{}
+	err := c.ShouldBindBodyWithJSON(&req)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Failed Parse request",
+		})
+		return
+	}
+	err = models.CreateWebhook(req)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Failed to create webhook",
+		})
+		return
+	}
+	c.JSON(200, gin.H{
+		"message": "Webhook created successfully!",
+	})
+}
+
+func ListWebhooks(c *gin.Context) {
+	webhooks, err := models.ListWebhooks()
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Failed to list webhooks",
+		})
+		return
+	}
+	c.JSON(200, gin.H{
+		"webhooks": webhooks,
+	})
+}

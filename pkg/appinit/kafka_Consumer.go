@@ -65,7 +65,7 @@ func (h *MessageHandler) Handle(ctx context.Context, msg *pubsub.Message) error 
 
 	// changeThe status of order to ""new Order" in mongoDB
 	order.Status = "new Order"
-	err = SaveOrder(ctx, &order, collection)
+	err = SaveOrder(ctx, &order, ordersCollection)
 	if err != nil {
 		logger.Printf("Failed to save order: %v", err)
 		return err

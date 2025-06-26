@@ -15,6 +15,7 @@ import (
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/omniful/go_commons/config"
 	"github.com/omniful/go_commons/sqs"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -35,23 +36,25 @@ type Order struct {
 	Price    float64 `json:"price" csv:"price"`
 }
 
-var mongoClinet *mongo.Client
+type Webhook struct {
+	URL      string `json:"url" `
+	TenantID int64  `json:"tenant_id" `
+}
+
+var mongoClient *mongo.Client
 var err error
 var client *awsS3.Client //  this is being returned to me by s3.NewDefaultAWSS3Client() of gocommons
 var ctx context.Context
-var collection *mongo.Collection
-var publisher *sqs.Publisher // Publisher for SQS messages
+var ordersCollection *mongo.Collection
+var webhookCollection *mongo.Collection // Collection for webhooks
+var publisher *sqs.Publisher            // Publisher for SQS messages
 
 func init() {
 	ctx = mycontext.GetContext()
-	dbname := config.GetString(ctx, "mongo.dbname")
-	collectionName := config.GetString(ctx, "mongo.collectionName")
 
-	appinit.ConnectDB()                                                  // Connect to MongoDB
-	collection, err = appinit.GetMongoCollection(dbname, collectionName) //get the collection
-	if err != nil {
-		log.Fatal(err)
-	}
+	appinit.ConnectDB() // Connect to MongoDB
+	ordersCollection = appinit.GetOrdersCollection()
+	webhookCollection = appinit.GetWebhookCollection()
 
 	appinit.ConnectS3()            // Initialize S3 client
 	client = appinit.GetS3Client() //get s3 client
@@ -156,4 +159,43 @@ func PushToSQS(bucket string, key string) error {
 	}
 	log.Println("Message successfully published to SQS")
 	return nil
+}
+
+func CreateWebhook(req *Webhook) error {
+	if req.URL == "" || req.TenantID <= 0 {
+		return errors.New("invalid webhook request")
+	}
+
+	webhook := &Webhook{
+		URL:      req.URL,
+		TenantID: req.TenantID,
+	}
+
+	// Insert the webhook into the MongoDB collection
+	_, err := webhookCollection.InsertOne(ctx, webhook)
+	if err != nil {
+		log.Println("Failed to create webhook:", err)
+		return err
+	}
+
+	log.Println("Webhook created successfully!")
+	return nil
+}
+
+func ListWebhooks() ([]Webhook, error) {
+
+	cursor, err := webhookCollection.Find(ctx, bson.M{})
+	if err != nil {
+		log.Println("Failed to list webhooks:", err)
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var webhooks []Webhook
+	if err := cursor.All(ctx, &webhooks); err != nil {
+		log.Println("Failed to decode webhooks:", err)
+		return nil, err
+	}
+
+	return webhooks, nil
 }

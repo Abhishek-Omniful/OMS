@@ -20,5 +20,11 @@ func Initialize(s *http.Server) {
 		{
 			csv.POST("/filepath", controllers.StoreInS3)
 		}
+
+		webhooks := v1.Group("/webhook")
+		{
+			webhooks.POST("/create", controllers.CreateWebhook)
+			webhooks.GET("/list", controllers.ListWebhooks)
+		}
 	}
 }

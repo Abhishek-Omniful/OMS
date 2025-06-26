@@ -20,6 +20,7 @@ import (
 )
 
 type Order struct {
+	TenantID int64   `json:"tenant_id" csv:"tenant_id"`
 	OrderID  int64   `json:"order_id" csv:"order_id"`
 	SKUID    int64   `json:"sku_id" csv:"sku_id"`
 	Quantity int     `json:"quantity" csv:"quantity"`
@@ -82,6 +83,9 @@ func ValidateWithIMS(hubID, skuID int64) bool {
 
 func ValidateOrder(order *Order) error {
 	// fmt.Println("1")
+	if order.TenantID <= 0 {
+		return errors.New("invalid TenantID")
+	}
 	if order.OrderID <= 0 {
 		return errors.New("invalid OrderID")
 	}
@@ -178,7 +182,8 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 
 		for _, row := range records {
 			logger.Infof("CSV Row: %v", row)
-
+            
+			tenantID, _ := strconv.ParseInt(row[colIdx["tenant_id"]], 10, 64)
 			orderID, _ := strconv.ParseInt(row[colIdx["order_id"]], 10, 64)
 			skuID, _ := strconv.ParseInt(row[colIdx["sku_id"]], 10, 64)
 			quantity, _ := strconv.Atoi(row[colIdx["quantity"]])
@@ -187,6 +192,7 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 			price, _ := strconv.ParseFloat(row[colIdx["price"]], 64)
 
 			order := Order{
+				TenantID: tenantID,
 				OrderID:  orderID,
 				SKUID:    skuID,
 				Quantity: quantity,

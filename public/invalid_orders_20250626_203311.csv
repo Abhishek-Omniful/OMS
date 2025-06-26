@@ -1,5 +1,4 @@
 tenant_id,order_id,sku_id,quantity,seller_id,hub_id,price
-1,1011,3,2,1,2,250
 2,1012,7,3,2,2,120
 3,1013,22,4,3,3,400
 4,1014,4,1,4,4,75

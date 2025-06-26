@@ -27,11 +27,7 @@ func GetKafkaProducer() *kafka.ProducerClient {
 }
 
 func PublishOrder(order *Order) {
-	// defer func() {
-	// 	log.Println("Closing Kafka producer")
-	// 	kafkaProducer.Close()
-	// }()
-
+	
 	// Marshal order into JSON
 	jsonBytes, err := json.Marshal(order)
 	if err != nil {
