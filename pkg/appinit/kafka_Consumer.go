@@ -16,7 +16,7 @@ import (
 
 var kafkaConsumer *kafka.ConsumerClient
 
-func checkInventory(sku_id, hub_id int64, quantity int) bool {
+func CheckInventory(sku_id, hub_id int64, quantity int) bool {
 	req := &http.Request{
 		Url: "api/v1/inventory/check",
 		QueryParams: url.Values{
@@ -55,7 +55,7 @@ func (h *MessageHandler) Handle(ctx context.Context, msg *pubsub.Message) error 
 	hub_id := order.HubID
 	quantity := order.Quantity
 
-	status := checkInventory(sku_id, hub_id, quantity)
+	status := CheckInventory(sku_id, hub_id, quantity)
 	if !status {
 		logger.Println("Not Enough Inventory ! , Keep it on Hold")
 		return nil
@@ -65,7 +65,10 @@ func (h *MessageHandler) Handle(ctx context.Context, msg *pubsub.Message) error 
 
 	// changeThe status of order to ""new Order" in mongoDB
 	order.Status = "new Order"
-	err = SaveOrder(ctx, &order, ordersCollection)
+	err = SaveOrder(ctx, &order, OrdersCollection)
+
+	logger.Infof("Notifying the tenant about order creation for TenantID=%d", order.TenantID)
+	SendNotification(order.TenantID, order)
 	if err != nil {
 		logger.Printf("Failed to save order: %v", err)
 		return err
@@ -95,11 +98,6 @@ func GetKafkaConsumer() *kafka.ConsumerClient {
 }
 
 func ReceiveOrder() {
-	// defer func() {
-	// 	log.Println("Closing Kafka consumer")
-	// 	kafkaConsumer.Close()
-	// }()
-
 	log.Println("Attaching NewRelic interceptor to consumer")
 	kafkaConsumer.SetInterceptor(interceptor.NewRelicInterceptor())
 

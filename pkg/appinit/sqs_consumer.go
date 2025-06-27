@@ -116,7 +116,7 @@ func (h *queueHandler) Process(ctx context.Context, msgs *[]sqs.Message) error {
 		logger.Infof("Starting to parse CSV file: %s", tmpFile)
 
 		// Parse the CSV file
-		err = ParseCSV(tmpFile, ctx, logger, ordersCollection)
+		err = ParseCSV(tmpFile, ctx, logger, OrdersCollection)
 		if err != nil {
 			logger.Errorf("failed to parse CSV file: %v", err)
 			continue

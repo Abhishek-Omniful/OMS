@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/Abhishek-Omniful/OMS/mycontext"
+	middlewares "github.com/Abhishek-Omniful/OMS/pkg/middleware"
 	"github.com/Abhishek-Omniful/OMS/pkg/router"
 	"github.com/omniful/go_commons/config"
 	"github.com/omniful/go_commons/http"
@@ -19,7 +20,7 @@ func main() {
 		config.GetDuration(ctx, "server.idle_timeout"),  // Idle timeout
 		false,
 	)
-
+	server.Use(middlewares.LogRequest(ctx)) // Middleware for logging requests
 	router.Initialize(server)
 	err := server.StartServer(config.GetString(ctx, "server.name"))
 	if err != nil {

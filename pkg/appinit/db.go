@@ -59,8 +59,8 @@ var mongoClient *mongo.Client
 var err error
 
 var (
-	ordersCollection  *mongo.Collection
-	webhookCollection *mongo.Collection
+	OrdersCollection  *mongo.Collection
+	WebhookCollection *mongo.Collection
 )
 
 // Connects to MongoDB and initializes both collections
@@ -86,9 +86,9 @@ func ConnectDB() {
 	dbName := config.GetString(ctx, "mongo.dbname")
 	webhookCollectionName := config.GetString(ctx, "mongo.webhooksCollection")
 	ordersCollectionName := config.GetString(ctx, "mongo.ordersCollection")
-	ordersCollection = mongoClient.Database(dbName).Collection(ordersCollectionName)
+	OrdersCollection = mongoClient.Database(dbName).Collection(ordersCollectionName)
 	logger.Infof("Connected to MongoDB collection: %s", ordersCollectionName)
-	webhookCollection = mongoClient.Database(dbName).Collection(webhookCollectionName)
+	WebhookCollection = mongoClient.Database(dbName).Collection(webhookCollectionName)
 	logger.Infof("Connected to MongoDB collection: %s", webhookCollectionName)
 }
 
@@ -99,10 +99,10 @@ func GetDB() *mongo.Client {
 
 // Accessor for the orders collection
 func GetOrdersCollection() *mongo.Collection {
-	return ordersCollection
+	return OrdersCollection
 }
 
 // Accessor for the webhook collection
 func GetWebhookCollection() *mongo.Collection {
-	return webhookCollection
+	return WebhookCollection
 }

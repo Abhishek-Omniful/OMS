@@ -20,21 +20,24 @@ import (
 )
 
 type Order struct {
-	TenantID int64   `json:"tenant_id" csv:"tenant_id"`
-	OrderID  int64   `json:"order_id" csv:"order_id"`
-	SKUID    int64   `json:"sku_id" csv:"sku_id"`
-	Quantity int     `json:"quantity" csv:"quantity"`
-	SellerID int64   `json:"seller_id" csv:"seller_id"`
-	HubID    int64   `json:"hub_id" csv:"hub_id"`
-	Price    float64 `json:"price" csv:"price"`
-	Status   string  `json:"status" csv:"status"`
+	TenantID int64   `json:"tenant_id" csv:"tenant_id" bson:"tenant_id"`
+	OrderID  int64   `json:"order_id"  csv:"order_id"  bson:"order_id"`
+	SKUID    int64   `json:"sku_id"    csv:"sku_id"    bson:"sku_id"`
+	Quantity int     `json:"quantity"  csv:"quantity"  bson:"quantity"`
+	SellerID int64   `json:"seller_id" csv:"seller_id" bson:"seller_id"`
+	HubID    int64   `json:"hub_id"    csv:"hub_id"    bson:"hub_id"`
+	Price    float64 `json:"price"     csv:"price"     bson:"price"`
+	Status   string  `json:"status"    csv:"status"    bson:"status"`
 }
+
 type ValidationResponse struct {
 	IsValid bool
 	Error   string
 }
 
 var client *http.Client
+var invalid csv.Records
+var headers csv.Headers
 
 func init() {
 	// Initialize client with base URL
@@ -134,6 +137,43 @@ func SaveOrder(ctx context.Context, order *Order, collection *mongo.Collection) 
 	return nil
 }
 
+func DownloadInvalidCSV() error {
+	timestamp := time.Now().Format("20060102_150405")
+	filePath := fmt.Sprintf("public/invalid_orders_%s.csv", timestamp)
+
+	dest := &csv.Destination{}
+	dest.SetFileName(filePath)
+	dest.SetUploadDirectory("public/")
+	dest.SetRandomizedFileName(false)
+
+	writer, err := csv.NewCommonCSVWriter(
+		csv.WithWriterHeaders(headers),
+		csv.WithWriterDestination(*dest),
+	)
+	if err != nil {
+		logger.Errorf("Failed to create CSV writer: %v", err)
+		return err
+	}
+	defer writer.Close(ctx)
+
+	if err := writer.Initialize(); err != nil {
+		logger.Errorf("Failed to initialize CSV writer: %v", err)
+		return err
+	}
+
+	if err := writer.WriteNextBatch(invalid); err != nil {
+		logger.Errorf("Failed to write invalid rows: %v", err)
+		return err
+	}
+
+	logger.Infof("Invalid rows saved to CSV at: %s", filePath)
+
+	publicURL := fmt.Sprintf("http://localhost:8082/%s", filePath)
+
+	logger.Infof("Download invalid CSV URL: %s", publicURL)
+	return nil
+}
+
 func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collection *mongo.Collection) error {
 	// Step 2: Initialize CSV reader from local file
 
@@ -159,7 +199,7 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 		return err
 	}
 
-	headers, err := csvReader.GetHeaders()
+	headers, err = csvReader.GetHeaders()
 	if err != nil {
 		logger.Errorf("failed to read CSV headers: %v", err)
 		return err
@@ -171,8 +211,6 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 		colIdx[col] = i
 	}
 
-	var invalid csv.Records
-
 	for !csvReader.IsEOF() {
 		records, err := csvReader.ReadNextBatch()
 		if err != nil {
@@ -182,7 +220,7 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 
 		for _, row := range records {
 			logger.Infof("CSV Row: %v", row)
-            
+
 			tenantID, _ := strconv.ParseInt(row[colIdx["tenant_id"]], 10, 64)
 			orderID, _ := strconv.ParseInt(row[colIdx["order_id"]], 10, 64)
 			skuID, _ := strconv.ParseInt(row[colIdx["sku_id"]], 10, 64)
@@ -221,39 +259,11 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 		}
 	}
 	if len(invalid) > 0 {
-		timestamp := time.Now().Format("20060102_150405")
-		filePath := fmt.Sprintf("public/invalid_orders_%s.csv", timestamp)
-
-		dest := &csv.Destination{}
-		dest.SetFileName(filePath)
-		dest.SetUploadDirectory("public/")
-		dest.SetRandomizedFileName(false)
-
-		writer, err := csv.NewCommonCSVWriter(
-			csv.WithWriterHeaders(headers),
-			csv.WithWriterDestination(*dest),
-		)
-		if err != nil {
-			logger.Errorf("failed to create CSV writer: %v", err)
+		logger.Infof("Downloading Invalid CSV")
+		if err := DownloadInvalidCSV(); err != nil {
+			logger.Errorf("Failed to download invalid CSV: %v", err)
 			return err
 		}
-		defer writer.Close(ctx)
-
-		if err := writer.Initialize(); err != nil {
-			logger.Errorf("failed to initialize CSV writer: %v", err)
-			return err
-		}
-
-		if err := writer.WriteNextBatch(invalid); err != nil {
-			logger.Errorf("failed to write invalid rows: %v", err)
-			return err
-		}
-
-		logger.Infof("Invalid rows saved to CSV at: %s", filePath)
-
-		publicURL := fmt.Sprintf("http://localhost:8082/%s", filePath)
-
-		logger.Infof("Download invalid CSV here: %s", publicURL)
 	}
 	return nil
 }

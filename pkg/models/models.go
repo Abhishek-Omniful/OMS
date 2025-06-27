@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Abhishek-Omniful/OMS/mycontext"
+
 	"github.com/Abhishek-Omniful/OMS/pkg/appinit"
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/omniful/go_commons/config"
@@ -27,18 +28,18 @@ type BulkOrderRequest struct {
 	FilePath string `json:"filePath"`
 }
 
-type Order struct {
-	OrderID  int64   `json:"order_id" csv:"order_id"`
-	SKUID    int64   `json:"sku_id" csv:"sku_id"`
-	Quantity int     `json:"quantity" csv:"quantity"`
-	SellerID int64   `json:"seller_id" csv:"seller_id"`
-	HubID    int64   `json:"hub_id" csv:"hub_id"`
-	Price    float64 `json:"price" csv:"price"`
-}
+// type Order struct {
+// 	OrderID  int64   `json:"order_id" csv:"order_id" bson:"order_id"`
+// 	SKUID    int64   `json:"sku_id" csv:"sku_id" bson:"sku_id"`
+// 	Quantity int     `json:"quantity" csv:"quantity" bson:"quantity"`
+// 	SellerID int64   `json:"seller_id" csv:"seller_id" bson:"seller_id"`
+// 	HubID    int64   `json:"hub_id" csv:"hub_id" bson:"hub_id"`
+// 	Price    float64 `json:"price" csv:"price" bson:"price"`
+// }
 
 type Webhook struct {
-	URL      string `json:"url" `
-	TenantID int64  `json:"tenant_id" `
+	URL      string `json:"url" bson:"url"`
+	TenantID int64  `json:"tenant_id" bson:"tenant_id"`
 }
 
 var mongoClient *mongo.Client
@@ -75,6 +76,11 @@ func init() {
 
 	// Then produce messages
 	appinit.InitKafkaProducer()
+
+	//initialize Redis
+	appinit.ConnectRedis()
+
+	appinit.OrderRetryWorker() // Start the retry worker for on_hold orders
 
 }
 
