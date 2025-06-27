@@ -32,10 +32,10 @@ This microservice-based Order Management System handles order ingestion, validat
    - For each order:
      - Calls IMS again to check **inventory availability**.
      - If inventory is sufficient:
-      - IMS deducts the requested quantity.
-      - Returns a success response.
+       - IMS deducts the requested quantity.
+       - Returns a success response.
      - On receiving a `true` status from IMS:
-      - **Updates** the order status in MongoDB to `"new Order"`.
+       - **Updates** the order status in MongoDB to `"new Order"`.
 
 ---
 
@@ -48,7 +48,38 @@ This microservice-based Order Management System handles order ingestion, validat
 | Messaging     | AWS SQS, Kafka            |
 | Storage       | AWS S3                    |
 
+---
 
+## 🛠️ Run Commands
 
+```sh
+# Create S3 Bucket in LocalStack
+docker run --rm -it --network="host" \
+  -e AWS_ACCESS_KEY_ID=test \
+  -e AWS_SECRET_ACCESS_KEY=test \
+  -e AWS_DEFAULT_REGION=us-east-1 \
+  amazon/aws-cli \
+  --endpoint-url=http://localhost:4566 \
+  s3 mb s3://oms-temp-public
 
+# Upload CSV to Local S3 Bucket
+docker run --rm -it --network="host" \
+  -e AWS_ACCESS_KEY_ID=test \
+  -e AWS_SECRET_ACCESS_KEY=test \
+  -e AWS_DEFAULT_REGION=us-east-1 \
+  -v "${PWD}:/data" \
+  amazon/aws-cli \
+  s3 cp /data/orders.csv s3://oms-temp-public/orders.csv \
+  --endpoint-url=http://localhost:4566
 
+# Set environment variables and run OMS
+$env:AWS_ACCESS_KEY_ID = "test"
+$env:AWS_SECRET_ACCESS_KEY = "test"
+$env:AWS_REGION = "us-east-1"
+$env:AWS_S3_ENDPOINT = "http://localhost:4566"
+$env:LOCAL_S3_BUCKET_URL = "localhost:4566"
+$env:LOCALSTACK_ENDPOINT = "http://localhost:4566"
+$env:LOCAL_SQS_ENDPOINT = "http://localhost:4566"
+$env:CONFIG_SOURCE = "local"
+
+go run main.go
