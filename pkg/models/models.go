@@ -6,10 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/Abhishek-Omniful/OMS/mycontext"
-	"github.com/Abhishek-Omniful/OMS/pkg/appinit"
+	"github.com/Abhishek-Omniful/OMS/pkg/services"
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/omniful/go_commons/config"
 	"github.com/omniful/go_commons/i18n"
@@ -34,43 +33,24 @@ type Webhook struct {
 	TenantID int64  `json:"tenant_id" bson:"tenant_id"`
 }
 
-var mongoClient *mongo.Client
 var err error
 var client *awsS3.Client
 var ctx context.Context
-var ordersCollection *mongo.Collection
 var webhookCollection *mongo.Collection
 var publisher *sqs.Publisher
 
 func init() {
+	// logger.Infof(i18n.Translate(ctx, "Initializing application...2"))
+	log.Println("Initializing application...2")
+	client = services.GetS3Client()
 	ctx = mycontext.GetContext()
-
-	appinit.ConnectDB()
-	ordersCollection = appinit.GetOrdersCollection()
-	webhookCollection = appinit.GetWebhookCollection()
-
-	appinit.ConnectS3()
-	client = appinit.GetS3Client()
-
-	appinit.SQSInit()
-	newQueue := appinit.GetSqs()
-
-	appinit.PublisherInit(newQueue)
-	publisher = appinit.GetPublisher()
-
-	appinit.InitConsumer()
-	appinit.StartConsumer(ctx)
-
-	go appinit.InitKafkaConsumer()
-	time.Sleep(3 * time.Second)
-	appinit.InitKafkaProducer()
-	appinit.ConnectRedis()
-	appinit.OrderRetryWorker()
+	webhookCollection = services.GetWebhookCollection()
+	publisher = services.GetPublisher()
 }
 
 func StoreInS3(s *StoreCSV) error {
 	filepath := s.FilePath
-	fileBytes := appinit.GetLocalCSV(filepath)
+	fileBytes := services.GetLocalCSV(filepath)
 
 	bucketName := config.GetString(ctx, "s3.bucketName")
 	filename := config.GetString(ctx, "s3.fileName")

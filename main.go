@@ -3,16 +3,20 @@ package main
 import (
 	"log"
 
+	initpkg "github.com/Abhishek-Omniful/OMS/init"
 	"github.com/Abhishek-Omniful/OMS/mycontext"
+
 	middlewares "github.com/Abhishek-Omniful/OMS/pkg/middleware"
 	"github.com/Abhishek-Omniful/OMS/pkg/router"
 	"github.com/omniful/go_commons/config"
 	"github.com/omniful/go_commons/http"
 )
 
+
+
 func main() {
 	ctx := mycontext.GetContext()
-
+	initpkg.Initialize()
 	server := http.InitializeServer(
 		config.GetString(ctx, "server.port"),            // Port to listen
 		config.GetDuration(ctx, "server.read_timeout"),  // Read timeout

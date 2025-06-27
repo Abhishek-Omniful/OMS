@@ -1,4 +1,4 @@
-package appinit
+package services
 
 import (
 	"github.com/Abhishek-Omniful/OMS/mycontext"
