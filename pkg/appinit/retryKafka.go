@@ -6,7 +6,6 @@ import (
 
 	"github.com/Abhishek-Omniful/OMS/mycontext"
 	"github.com/omniful/go_commons/i18n"
-	"github.com/omniful/go_commons/log"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -17,24 +16,23 @@ func OrderRetryWorker() {
 		defer ticker.Stop()
 
 		for range ticker.C {
-			log.Info(i18n.Translate(ctx, "retrying on_hold orders..."))
+			logger.Info(i18n.Translate(ctx, "retrying on_hold orders..."))
 			ProcessOnHoldOrders()
 		}
 	}()
 }
 
 func ProcessOnHoldOrders() {
-	ctx := context.Background()
+	ctx := mycontext.GetContext()
 
 	orders, err := GetOnHoldOrders(ctx)
 	if err != nil {
-		log.Errorf(i18n.Translate(ctx, "Failed to fetch on_hold orders: %v"), err)
+		logger.Errorf(i18n.Translate(ctx, "Failed to fetch on_hold orders: %v"), err)
 		return
 	}
 
 	for _, order := range orders {
-		log.Infof(i18n.Translate(ctx, "Retrying order: %s"), order.OrderID)
-
+		logger.Infof(i18n.Translate(ctx, "Retrying order: %d"), order.OrderID)
 		CheckInventory(order.SKUID, order.HubID, order.Quantity)
 	}
 }

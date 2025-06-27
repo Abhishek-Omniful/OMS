@@ -1,17 +1,19 @@
 package appinit
 
 import (
-	"log"
-
+	"github.com/Abhishek-Omniful/OMS/mycontext"
+	"github.com/omniful/go_commons/i18n"
 	"github.com/omniful/go_commons/sqs"
 )
 
 var publisher *sqs.Publisher
 
 func PublisherInit(newQueue *sqs.Queue) {
-	log.Println("Initializing SQS Publisher")
+	ctx := mycontext.GetContext()
+
+	logger.Infof(i18n.Translate(ctx, "Initializing SQS Publisher"))
 	publisher = sqs.NewPublisher(newQueue)
-	log.Println("SQS Publisher successfully created")
+	logger.Infof(i18n.Translate(ctx, "SQS Publisher successfully created"))
 }
 
 func GetPublisher() *sqs.Publisher {

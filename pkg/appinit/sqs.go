@@ -1,28 +1,23 @@
 package appinit
 
 import (
-	"log"
-	// "os"
-
 	"github.com/Abhishek-Omniful/OMS/mycontext"
 	"github.com/omniful/go_commons/config"
+	"github.com/omniful/go_commons/i18n"
 	"github.com/omniful/go_commons/sqs"
 )
 
 var newQueue *sqs.Queue
 
 func SQSInit() {
-
-	log.Println("Initializing SQS Queue")
-
 	ctx := mycontext.GetContext()
+
+	logger.Infof(i18n.Translate(ctx, "Initializing SQS Queue"))
 
 	region := config.GetString(ctx, "aws.region")
 	account := config.GetString(ctx, "aws.account")
 	endpoint := config.GetString(ctx, "aws.sqsendpoint")
 	queueName := config.GetString(ctx, "aws.sqsname")
-
-	//log.Println("Region:", region, "Account:", account, "Endpoint:", endpoint)
 
 	sqsCfg := sqs.GetSQSConfig(
 		ctx,
@@ -33,22 +28,22 @@ func SQSInit() {
 		endpoint,
 	)
 
-	log.Println("SQS Config:", sqsCfg)
+	logger.Infof(i18n.Translate(ctx, "SQS Config initialized: %+v"), sqsCfg)
 
 	// Ensure queue exists (create if missing)
 	err := sqs.CreateQueue(ctx, sqsCfg, queueName, "standard")
 	if err != nil {
-		log.Fatal("Error creating SQS queue:", err)
+		logger.Panicf(i18n.Translate(ctx, "Error creating SQS queue: %v"), err)
 		return
 	}
 
 	newQueue, err = sqs.NewStandardQueue(ctx, queueName, sqsCfg)
-
 	if err != nil {
-		log.Fatal(err)
+		logger.Panicf(i18n.Translate(ctx, "Failed to initialize SQS queue: %v"), err)
+		return
 	}
 
-	log.Println("Standard SQS Queue Successfully created")
+	logger.Infof(i18n.Translate(ctx, "Standard SQS Queue successfully created"))
 }
 
 func GetSqs() *sqs.Queue {

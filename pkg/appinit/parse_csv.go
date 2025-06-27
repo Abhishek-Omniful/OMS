@@ -13,6 +13,7 @@ import (
 	"github.com/omniful/go_commons/config"
 	"github.com/omniful/go_commons/csv"
 	"github.com/omniful/go_commons/http"
+	"github.com/omniful/go_commons/i18n"
 	"github.com/omniful/go_commons/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -40,7 +41,6 @@ var invalid csv.Records
 var headers csv.Headers
 
 func init() {
-	// Initialize client with base URL
 	ctx := mycontext.GetContext()
 	serviceName := config.GetString(ctx, "client.serviceName")
 	baseURL := config.GetString(ctx, "client.baseURL")
@@ -53,19 +53,21 @@ func init() {
 		MaxIdleConnsPerHost: maxIdleConnsPerHost,
 	}
 
+	var err error
 	client, err = http.NewHTTPClient(
-		serviceName, // client service name
-		baseURL,     // base URL
+		serviceName,
+		baseURL,
 		transport,
-		http.WithTimeout(timeout), // optional timeout
+		http.WithTimeout(timeout),
 	)
 	if err != nil {
-		logger.Errorf("Failed to initialize HTTP client: %v", err)
+		ctx := mycontext.GetContext()
+		logger.Errorf(i18n.Translate(ctx, "Failed to initialize HTTP client: %v"), err)
 	}
 }
 
 func ValidateWithIMS(hubID, skuID int64) bool {
-	// fmt.Println("2")
+	ctx := mycontext.GetContext()
 	req := &http.Request{
 		Url: fmt.Sprintf("/api/v1/validators/validate_order/%d/%d", skuID, hubID),
 		Headers: map[string][]string{
@@ -74,18 +76,17 @@ func ValidateWithIMS(hubID, skuID int64) bool {
 		Timeout: 5 * time.Second,
 	}
 	var response ValidationResponse
-	// fmt.Println(response)
+
 	_, err := client.Get(req, &response)
 	if err != nil {
-		logger.Errorf("Failed to call IMS validate API: %v", err)
+		logger.Errorf(i18n.Translate(ctx, "Failed to call IMS validate API: %v"), err)
 		return false
 	}
-	logger.Infof("Response from IMS validate API: %v", response)
+	logger.Infof(i18n.Translate(ctx, "Response from IMS validate API: %v"), response)
 	return response.IsValid
 }
 
 func ValidateOrder(order *Order) error {
-	// fmt.Println("1")
 	if order.TenantID <= 0 {
 		return errors.New("invalid TenantID")
 	}
@@ -107,10 +108,7 @@ func ValidateOrder(order *Order) error {
 	if order.Price < 0 {
 		return errors.New("invalid Price")
 	}
-	//call the ims validate api for hubid and sku id from here
-	valid := ValidateWithIMS(order.HubID, order.SKUID)
-
-	if !valid {
+	if !ValidateWithIMS(order.HubID, order.SKUID) {
 		return errors.New("invalid HubID or SKUID")
 	}
 	return nil
@@ -121,23 +119,21 @@ func SaveOrder(ctx context.Context, order *Order, collection *mongo.Collection) 
 		"hub_id": order.HubID,
 		"sku_id": order.SKUID,
 	}
+	update := bson.M{"$set": order}
+	opts := options.Update().SetUpsert(true)
 
-	update := bson.M{
-		"$set": order, // Set full document (or use selective fields if needed)
-	}
-
-	opts := options.Update().SetUpsert(true) // Upsert = insert if not exists
 	_, err := collection.UpdateOne(ctx, filter, update, opts)
 	if err != nil {
-		logger.Errorf("Failed to upsert order: %v", err)
+		logger.Errorf(i18n.Translate(ctx, "Failed to upsert order: %v"), err)
 		return err
 	}
 
-	logger.Infof("Order upserted successfully for hub_id=%d and sku_id=%d", order.HubID, order.SKUID)
+	logger.Infof(i18n.Translate(ctx, "Order upserted successfully for hub_id=%d and sku_id=%d"), order.HubID, order.SKUID)
 	return nil
 }
 
 func DownloadInvalidCSV() error {
+	ctx := mycontext.GetContext()
 	timestamp := time.Now().Format("20060102_150405")
 	filePath := fmt.Sprintf("public/invalid_orders_%s.csv", timestamp)
 
@@ -151,32 +147,27 @@ func DownloadInvalidCSV() error {
 		csv.WithWriterDestination(*dest),
 	)
 	if err != nil {
-		logger.Errorf("Failed to create CSV writer: %v", err)
+		logger.Errorf(i18n.Translate(ctx, "Failed to create CSV writer: %v"), err)
 		return err
 	}
 	defer writer.Close(ctx)
 
 	if err := writer.Initialize(); err != nil {
-		logger.Errorf("Failed to initialize CSV writer: %v", err)
+		logger.Errorf(i18n.Translate(ctx, "Failed to initialize CSV writer: %v"), err)
 		return err
 	}
 
 	if err := writer.WriteNextBatch(invalid); err != nil {
-		logger.Errorf("Failed to write invalid rows: %v", err)
+		logger.Errorf(i18n.Translate(ctx, "Failed to write invalid rows: %v"), err)
 		return err
 	}
 
-	logger.Infof("Invalid rows saved to CSV at: %s", filePath)
-
-	publicURL := fmt.Sprintf("http://localhost:8082/%s", filePath)
-
-	logger.Infof("Download invalid CSV URL: %s", publicURL)
+	logger.Infof(i18n.Translate(ctx, "Invalid rows saved to CSV at: %s"), filePath)
+	logger.Infof(i18n.Translate(ctx, "Download invalid CSV URL: http://localhost:8082/%s"), filePath)
 	return nil
 }
 
 func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collection *mongo.Collection) error {
-	// Step 2: Initialize CSV reader from local file
-
 	csvReader, err := csv.NewCommonCSV(
 		csv.WithBatchSize(100),
 		csv.WithSource(csv.Local),
@@ -185,26 +176,21 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 		csv.WithDataRowSanitizers(csv.SanitizeSpace, csv.SanitizeToLower),
 	)
 	if err != nil {
-		logger.Errorf("failed to create CSV reader: %v", err)
-		return err
-	}
-
-	if err != nil {
-		logger.Errorf("failed to create CSV reader: %v", err)
+		logger.Errorf(i18n.Translate(ctx, "Failed to create CSV reader: %v"), err)
 		return err
 	}
 
 	if err := csvReader.InitializeReader(ctx); err != nil {
-		logger.Errorf("failed to initialize CSV reader: %v", err)
+		logger.Errorf(i18n.Translate(ctx, "Failed to initialize CSV reader: %v"), err)
 		return err
 	}
 
 	headers, err = csvReader.GetHeaders()
 	if err != nil {
-		logger.Errorf("failed to read CSV headers: %v", err)
+		logger.Errorf(i18n.Translate(ctx, "Failed to read CSV headers: %v"), err)
 		return err
 	}
-	logger.Infof("CSV Headers: %v", headers)
+	logger.Infof(i18n.Translate(ctx, "CSV Headers: %v"), headers)
 
 	colIdx := make(map[string]int)
 	for i, col := range headers {
@@ -214,12 +200,12 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 	for !csvReader.IsEOF() {
 		records, err := csvReader.ReadNextBatch()
 		if err != nil {
-			logger.Errorf("failed to read CSV batch: %v", err)
+			logger.Errorf(i18n.Translate(ctx, "Failed to read CSV batch: %v"), err)
 			break
 		}
 
 		for _, row := range records {
-			logger.Infof("CSV Row: %v", row)
+			logger.Infof(i18n.Translate(ctx, "CSV Row: %v"), row)
 
 			tenantID, _ := strconv.ParseInt(row[colIdx["tenant_id"]], 10, 64)
 			orderID, _ := strconv.ParseInt(row[colIdx["order_id"]], 10, 64)
@@ -240,28 +226,27 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 			}
 
 			if err := ValidateOrder(&order); err != nil {
-				logger.Warnf("Validation failed: %v", err)
+				logger.Warnf(i18n.Translate(ctx, "Validation failed: %v"), err)
 				invalid = append(invalid, row)
 				continue
 			}
-			logger.Infof("Order validated successfully: %+v", order)
-			order.Status = "onHold" // Set default status
+			logger.Infof(i18n.Translate(ctx, "Order validated successfully: %+v"), order)
 
-			// Save + Publish
+			order.Status = "onHold"
+
 			if err := SaveOrder(ctx, &order, collection); err != nil {
-				logger.Errorf("Save failed: %v", err)
+				logger.Errorf(i18n.Translate(ctx, "Save failed: %v"), err)
 				invalid = append(invalid, row)
 				continue
 			}
 			PublishOrder(&order)
-			// publishOrderCreated(ctx, producer, order)
-
 		}
 	}
+
 	if len(invalid) > 0 {
-		logger.Infof("Downloading Invalid CSV")
+		logger.Infof(i18n.Translate(ctx, "Downloading Invalid CSV"))
 		if err := DownloadInvalidCSV(); err != nil {
-			logger.Errorf("Failed to download invalid CSV: %v", err)
+			logger.Errorf(i18n.Translate(ctx, "Failed to download invalid CSV: %v"), err)
 			return err
 		}
 	}

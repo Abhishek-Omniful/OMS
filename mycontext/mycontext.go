@@ -2,27 +2,28 @@ package mycontext
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/omniful/go_commons/config"
+	"github.com/omniful/go_commons/i18n"
+	"github.com/omniful/go_commons/log"
 )
 
 var ctx context.Context
 
 func init() {
-	//mandatory to call config.init() before using the context
-	err := config.Init(time.Second * 10) // this helps to load the config file (yaml)
+	// Mandatory to call config.Init() before using the context
+	err := config.Init(time.Second * 10) // Load config file (yaml)
 	if err != nil {
-		log.Panicf("Error while initialising config, err: %v", err)
+		log.DefaultLogger().Panicf(i18n.Translate(context.Background(), "Error while initializing config, err: %v"), err)
 		panic(err)
 	}
 
-	ctx, err = config.TODOContext() //global context
+	ctx, err = config.TODOContext() // Global context
 	if err != nil {
-		log.Panicf("Failed to create context: %v", err)
+		log.DefaultLogger().Panicf(i18n.Translate(context.Background(), "Failed to create context: %v"), err)
 	}
-	log.Println("Context initialized successfully")
+	log.DefaultLogger().Info(i18n.Translate(ctx, "Context initialized successfully"))
 }
 
 func GetContext() context.Context {

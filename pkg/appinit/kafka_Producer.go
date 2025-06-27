@@ -5,15 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/omniful/go_commons/i18n"
 	"github.com/omniful/go_commons/kafka"
-	"github.com/omniful/go_commons/log"
 	"github.com/omniful/go_commons/pubsub"
 )
 
 var kafkaProducer *kafka.ProducerClient
 
 func InitKafkaProducer() {
-	log.Println("Initializing Kafka producer")
+	ctx := context.Background()
+	logger.Infof(i18n.Translate(ctx, "Initializing Kafka producer"))
 
 	kafkaProducer = kafka.NewProducer(
 		kafka.WithBrokers([]string{"localhost:9092"}),
@@ -27,11 +28,11 @@ func GetKafkaProducer() *kafka.ProducerClient {
 }
 
 func PublishOrder(order *Order) {
-	
-	// Marshal order into JSON
+	ctx := context.WithValue(context.Background(), "request_id", fmt.Sprintf("req-%d", order.OrderID))
+
 	jsonBytes, err := json.Marshal(order)
 	if err != nil {
-		log.Errorf("Failed to marshal order: %v", err)
+		logger.Errorf(i18n.Translate(ctx, "Failed to marshal order: %v"), err)
 		return
 	}
 
@@ -44,13 +45,11 @@ func PublishOrder(order *Order) {
 		},
 	}
 
-	ctx := context.WithValue(context.Background(), "request_id", fmt.Sprintf("req-%d", order.OrderID))
-
-	log.Infof("Publishing order to topic: %s", msg.Topic)
+	logger.Infof(i18n.Translate(ctx, "Publishing order to topic: %s"), msg.Topic)
 	err = kafkaProducer.Publish(ctx, msg)
 	if err != nil {
-		log.Errorf("Failed to publish order: %v", err)
+		logger.Errorf(i18n.Translate(ctx, "Failed to publish order: %v"), err)
 		panic(err)
 	}
-	log.Infof("Order published to Kafka successfully: OrderID=%d", order.OrderID)
+	logger.Infof(i18n.Translate(ctx, "Order published to Kafka successfully: OrderID=%d"), order.OrderID)
 }

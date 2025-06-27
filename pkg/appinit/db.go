@@ -1,59 +1,16 @@
-// package appinit
-
-// import (
-// 	"log"
-
-// 	"github.com/Abhishek-Omniful/OMS/mycontext"
-// 	"github.com/omniful/go_commons/config"
-// 	"go.mongodb.org/mongo-driver/mongo"
-// 	"go.mongodb.org/mongo-driver/mongo/options"
-// 	"go.mongodb.org/mongo-driver/mongo/readpref"
-// )
-
-// var mongoClient *mongo.Client
-// var err error
-// var collection *mongo.Collection
-
-// func ConnectDB() {
-// 	ctx := mycontext.GetContext()
-// 	log.Println("Connecting to MongoDB")
-// 	mongoURI := config.GetString(ctx, "mongo.uri")
-// 	log.Printf("MongoDB URI: %s", mongoURI)
-// 	mongoClient, err = mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
-// 	if err != nil {
-// 		log.Fatal(err)
-// 		return
-// 	}
-// 	err = mongoClient.Ping(ctx, readpref.Primary())
-// 	if err != nil {
-// 		log.Fatal(err)
-// 		return
-// 	}
-// 	log.Println("Connected to MongoDB successfully")
-// }
-
-// func GetDB() *mongo.Client {
-// 	return mongoClient
-// }
-
-// func GetMongoCollection(dbname string, collectionName string) (*mongo.Collection, error) {
-// 	mongoClient := GetDB()
-// 	collection = mongoClient.Database(dbname).Collection(collectionName)
-// 	log.Printf("Connected to MongoDB collection: %s in database: %s", collectionName, dbname)
-// 	return collection, err
-// }
-
 package appinit
 
 import (
-	"log"
-
 	"github.com/Abhishek-Omniful/OMS/mycontext"
 	"github.com/omniful/go_commons/config"
+	"github.com/omniful/go_commons/i18n"
+	"github.com/omniful/go_commons/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
+
+var logger = log.DefaultLogger()
 
 var mongoClient *mongo.Client
 var err error
@@ -63,46 +20,48 @@ var (
 	WebhookCollection *mongo.Collection
 )
 
-// Connects to MongoDB and initializes both collections
+// ConnectDB connects to MongoDB and initializes both collections
 func ConnectDB() {
 	ctx := mycontext.GetContext()
-	log.Println("Connecting to MongoDB")
+	logger.Infof(i18n.Translate(ctx, "Connecting to MongoDB"))
+
 	mongoURI := config.GetString(ctx, "mongo.uri")
-	log.Printf("MongoDB URI: %s", mongoURI)
+	logger.Infof(i18n.Translate(ctx, "MongoDB URI: %s"), mongoURI)
 
 	mongoClient, err = mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(i18n.Translate(ctx, "Failed to connect to MongoDB"), err)
 		return
 	}
 	err = mongoClient.Ping(ctx, readpref.Primary())
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(i18n.Translate(ctx, "Failed to ping MongoDB"), err)
 		return
 	}
-	log.Println("Connected to MongoDB successfully")
+	logger.Infof(i18n.Translate(ctx, "Connected to MongoDB successfully"))
 
-	// Initialize both collections
 	dbName := config.GetString(ctx, "mongo.dbname")
 	webhookCollectionName := config.GetString(ctx, "mongo.webhooksCollection")
 	ordersCollectionName := config.GetString(ctx, "mongo.ordersCollection")
+
 	OrdersCollection = mongoClient.Database(dbName).Collection(ordersCollectionName)
-	logger.Infof("Connected to MongoDB collection: %s", ordersCollectionName)
+	logger.Infof(i18n.Translate(ctx, "Connected to MongoDB collection: %s"), ordersCollectionName)
+
 	WebhookCollection = mongoClient.Database(dbName).Collection(webhookCollectionName)
-	logger.Infof("Connected to MongoDB collection: %s", webhookCollectionName)
+	logger.Infof(i18n.Translate(ctx, "Connected to MongoDB collection: %s"), webhookCollectionName)
 }
 
-// Returns the raw Mongo client
+// GetDB returns the raw Mongo client
 func GetDB() *mongo.Client {
 	return mongoClient
 }
 
-// Accessor for the orders collection
+// GetOrdersCollection returns the orders collection
 func GetOrdersCollection() *mongo.Collection {
 	return OrdersCollection
 }
 
-// Accessor for the webhook collection
+// GetWebhookCollection returns the webhook collection
 func GetWebhookCollection() *mongo.Collection {
 	return WebhookCollection
 }
