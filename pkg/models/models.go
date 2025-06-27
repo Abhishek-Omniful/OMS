@@ -40,8 +40,6 @@ var webhookCollection *mongo.Collection
 var publisher *sqs.Publisher
 
 func init() {
-	// logger.Infof(i18n.Translate(ctx, "Initializing application...2"))
-	log.Println("Initializing application...2")
 	client = services.GetS3Client()
 	ctx = mycontext.GetContext()
 	webhookCollection = services.GetWebhookCollection()
