@@ -20,7 +20,6 @@ var (
 	WebhookCollection *mongo.Collection
 )
 
-// ConnectDB connects to MongoDB and initializes both collections
 func ConnectDB() {
 	ctx := mycontext.GetContext()
 	logger.Infof(i18n.Translate(ctx, "Connecting to MongoDB"))
@@ -51,17 +50,14 @@ func ConnectDB() {
 	logger.Infof(i18n.Translate(ctx, "Connected to MongoDB collection: %s"), webhookCollectionName)
 }
 
-// GetDB returns the raw Mongo client
 func GetDB() *mongo.Client {
 	return mongoClient
 }
 
-// GetOrdersCollection returns the orders collection
 func GetOrdersCollection() *mongo.Collection {
 	return OrdersCollection
 }
 
-// GetWebhookCollection returns the webhook collection
 func GetWebhookCollection() *mongo.Collection {
 	return WebhookCollection
 }
