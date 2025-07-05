@@ -1,23 +1,33 @@
-package services
+package sqsService
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 
 	"github.com/Abhishek-Omniful/OMS/mycontext"
+	csvProcessorService "github.com/Abhishek-Omniful/OMS/pkg/helper/csvProcessor"
+	dbService "github.com/Abhishek-Omniful/OMS/pkg/integrations/db"
+	s3 "github.com/Abhishek-Omniful/OMS/pkg/integrations/s3" // go commons s3 import
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/omniful/go_commons/config"
 	"github.com/omniful/go_commons/i18n"
+	"github.com/omniful/go_commons/log"
 	"github.com/omniful/go_commons/sqs"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var consumer *sqs.Consumer
+var logger = log.DefaultLogger()
+var s3Client *awsS3.Client
+var ordersCollection *mongo.Collection
 
-func InitConsumer() {
+func InitSqsConsumer() {
 	ctx := mycontext.GetContext()
 	sqsQueue := GetSqs()
 
@@ -30,11 +40,11 @@ func InitConsumer() {
 
 	var err error
 	consumer, err = sqs.NewConsumer(
-		sqsQueue,
-		numberOfWorker,
-		concurrencyPerWorker,
-		&queueHandler{},
-		maxMessagesCount,
+		sqsQueue,             //SQS queue to consume messages from
+		numberOfWorker,       // Number of workers to process messages
+		concurrencyPerWorker, //Number of messages each worker can process concurrently
+		&queueHandler{},      //Struct implementing the logic to handle each message
+		maxMessagesCount,     // Maximum number of messages to fetch in one batch
 		visibilityTimeout,
 		isAsync,
 		sendBatchMessage,
@@ -48,15 +58,24 @@ func InitConsumer() {
 func StartConsumer(ctx context.Context) {
 	consumer.Start(ctx)
 	logger.Infof(i18n.Translate(ctx, "SQS consumer started"))
+	s3Client = s3.GetS3Client()
+	ordersCollection = dbService.GetOrdersCollection()
 }
 
 type queueHandler struct{}
 
-func (h *queueHandler) Process(ctx context.Context, msgs *[]sqs.Message) error {
+func (h *queueHandler) Process(ctx context.Context, msgs *[]sqs.Message) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Errorf(i18n.Translate(ctx, "Panic in queueHandler.Process: %v\nStack trace:\n%s"), r, debug.Stack())
+			err = fmt.Errorf("panic occurred while processing SQS messages: %v", r)
+		}
+	}()
+
 	for _, msg := range *msgs {
 		var payload struct {
-			Bucket string `json:"bucket"`
-			Key    string `json:"key"`
+			Bucket string `json:"bucket"` // S3 bucket name
+			Key    string `json:"key"`    // file name in S3
 		}
 
 		if err := json.Unmarshal(msg.Value, &payload); err != nil {
@@ -64,8 +83,8 @@ func (h *queueHandler) Process(ctx context.Context, msgs *[]sqs.Message) error {
 			continue
 		}
 
-		// Step 1: Download object from S3
 		tmpFile := filepath.Join(os.TempDir(), filepath.Base(payload.Key))
+
 		getObjOutput, err := s3Client.GetObject(ctx, &awsS3.GetObjectInput{
 			Bucket: aws.String(payload.Bucket),
 			Key:    aws.String(payload.Key),
@@ -78,7 +97,6 @@ func (h *queueHandler) Process(ctx context.Context, msgs *[]sqs.Message) error {
 
 		logger.Infof(i18n.Translate(ctx, "Downloaded CSV from S3"))
 
-		// Step 2: Write to local temp file
 		outFile, err := os.Create(tmpFile)
 		if err != nil {
 			logger.Errorf(i18n.Translate(ctx, "Failed to create temp file: %v"), err)
@@ -95,8 +113,7 @@ func (h *queueHandler) Process(ctx context.Context, msgs *[]sqs.Message) error {
 		logger.Infof(i18n.Translate(ctx, "CSV data written to temp file: %s"), tmpFile)
 		logger.Infof(i18n.Translate(ctx, "Starting to parse CSV file: %s"), tmpFile)
 
-		// Step 3: Parse CSV
-		err = ParseCSV(tmpFile, ctx, logger, OrdersCollection)
+		err = csvProcessorService.ParseCSV(tmpFile, ctx, logger, ordersCollection)
 		if err != nil {
 			logger.Errorf(i18n.Translate(ctx, "Failed to parse CSV file: %v"), err)
 			continue

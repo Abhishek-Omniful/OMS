@@ -12,8 +12,6 @@ import (
 	"github.com/omniful/go_commons/http"
 )
 
-
-
 func main() {
 	ctx := mycontext.GetContext()
 	initpkg.Initialize()

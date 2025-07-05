@@ -18,15 +18,6 @@ s3:
  bucketName: "oms-temp-public"
  fileName: "orders.csv"
 
-# aws:
-#   region: "${AWS_REGION:-us-east-1}"
-#   account: "${AWS_ACCOUNT_ID:-000000000000}"
-#   endpoint: "${AWS_ENDPOINT_URL:-http://localhost:4566}"
-#   accessKeyId: "${AWS_ACCESS_KEY_ID:-test}"
-#   secretAccessKey: "${AWS_SECRET_ACCESS_KEY:-test}"
-#   sqsendpoint: "${AWS_ENDPOINT_URL_SQS:-http://localhost:4566}"
-#   sqsname: "${AWS_SQS_NAME:-sqs-queue}"
-
 aws:
   region: "us-east-1"
   account: "000000000000"

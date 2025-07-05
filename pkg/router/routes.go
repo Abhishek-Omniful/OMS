@@ -28,5 +28,3 @@ func Initialize(s *http.Server) {
 		}
 	}
 }
-
-

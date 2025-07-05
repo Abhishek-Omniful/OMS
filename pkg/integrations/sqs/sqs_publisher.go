@@ -1,4 +1,4 @@
-package services
+package sqsService
 
 import (
 	"github.com/Abhishek-Omniful/OMS/mycontext"
@@ -8,7 +8,7 @@ import (
 
 var publisher *sqs.Publisher
 
-func PublisherInit(newQueue *sqs.Queue) {
+func InitSqsPublisher(newQueue *sqs.Queue) {
 	ctx := mycontext.GetContext()
 
 	logger.Infof(i18n.Translate(ctx, "Initializing SQS Publisher"))
@@ -16,6 +16,6 @@ func PublisherInit(newQueue *sqs.Queue) {
 	logger.Infof(i18n.Translate(ctx, "SQS Publisher successfully created"))
 }
 
-func GetPublisher() *sqs.Publisher {
+func GetSQSPublisher() *sqs.Publisher {
 	return publisher
 }

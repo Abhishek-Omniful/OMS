@@ -1,17 +1,19 @@
-package services
+package redisService
 
 import (
 	"github.com/Abhishek-Omniful/OMS/mycontext"
 	"github.com/omniful/go_commons/i18n"
+	"github.com/omniful/go_commons/log"
 	"github.com/omniful/go_commons/redis"
 )
 
 var RedisClient *redis.Client
+var logger = log.DefaultLogger()
 
 func ConnectRedis() *redis.Client {
 	ctx := mycontext.GetContext()
 
-	logger.Println(i18n.Translate(ctx, "Connecting to Redis..."))
+	logger.Info(i18n.Translate(ctx, "Connecting to Redis..."))
 
 	config := &redis.Config{
 		Hosts:       []string{"127.0.1.1:6379"},
@@ -27,6 +29,6 @@ func ConnectRedis() *redis.Client {
 	return RedisClient
 }
 
-func GetRedis() *redis.Client {
+func GetRedisClient() *redis.Client {
 	return RedisClient
 }

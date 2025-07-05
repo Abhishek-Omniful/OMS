@@ -1,4 +1,4 @@
-package services
+package csvProcessorService
 
 import (
 	"context"
@@ -7,64 +7,22 @@ import (
 	"strconv"
 	"time"
 
-	nethttp "net/http"
-
 	"github.com/Abhishek-Omniful/OMS/mycontext"
-	"github.com/omniful/go_commons/config"
+	"github.com/Abhishek-Omniful/OMS/pkg/helper/common"
+	httpclient "github.com/Abhishek-Omniful/OMS/pkg/integrations/httpClient"
+	kafkaService "github.com/Abhishek-Omniful/OMS/pkg/integrations/kafka"
 	"github.com/omniful/go_commons/csv"
 	"github.com/omniful/go_commons/http"
 	"github.com/omniful/go_commons/i18n"
 	"github.com/omniful/go_commons/log"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
-type Order struct {
-	TenantID int64   `json:"tenant_id" csv:"tenant_id" bson:"tenant_id"`
-	OrderID  int64   `json:"order_id"  csv:"order_id"  bson:"order_id"`
-	SKUID    int64   `json:"sku_id"    csv:"sku_id"    bson:"sku_id"`
-	Quantity int     `json:"quantity"  csv:"quantity"  bson:"quantity"`
-	SellerID int64   `json:"seller_id" csv:"seller_id" bson:"seller_id"`
-	HubID    int64   `json:"hub_id"    csv:"hub_id"    bson:"hub_id"`
-	Price    float64 `json:"price"     csv:"price"     bson:"price"`
-	Status   string  `json:"status"    csv:"status"    bson:"status"`
-}
-
-type ValidationResponse struct {
-	IsValid bool
-	Error   string
-}
 
 var client *http.Client
 var invalid csv.Records
 var headers csv.Headers
-
-func init() {
-	ctx := mycontext.GetContext()
-	serviceName := config.GetString(ctx, "client.serviceName")
-	baseURL := config.GetString(ctx, "client.baseURL")
-	timeout := config.GetDuration(ctx, "http.timeout")
-	maxIdleConns := config.GetInt(ctx, "client.maxIdleConns")
-	maxIdleConnsPerHost := config.GetInt(ctx, "client.maxIdleConnsPerHost")
-
-	transport := &nethttp.Transport{
-		MaxIdleConns:        maxIdleConns,
-		MaxIdleConnsPerHost: maxIdleConnsPerHost,
-	}
-
-	var err error
-	client, err = http.NewHTTPClient(
-		serviceName,
-		baseURL,
-		transport,
-		http.WithTimeout(timeout),
-	)
-	if err != nil {
-		ctx := mycontext.GetContext()
-		logger.Errorf(i18n.Translate(ctx, "Failed to initialize HTTP client: %v"), err)
-	}
-}
+var logger = log.DefaultLogger()
+var response = &common.ValidationResponse{}
 
 func ValidateWithIMS(hubID, skuID int64) bool {
 	ctx := mycontext.GetContext()
@@ -75,18 +33,21 @@ func ValidateWithIMS(hubID, skuID int64) bool {
 		},
 		Timeout: 5 * time.Second,
 	}
-	var response ValidationResponse
-
+	if client == nil {
+		logger.Errorf(i18n.Translate(ctx, "HTTP client is nil — did you forget to initialize it?"))
+		return false
+	}
 	_, err := client.Get(req, &response)
+
 	if err != nil {
 		logger.Errorf(i18n.Translate(ctx, "Failed to call IMS validate API: %v"), err)
 		return false
 	}
-	logger.Infof(i18n.Translate(ctx, "Response from IMS validate API: %v"), response)
+	logger.Infof(i18n.Translate(ctx, "Response from IMS hub/sku validation API: %v"), response)
 	return response.IsValid
 }
 
-func ValidateOrder(order *Order) error {
+func ValidateOrder(order *common.Order) error {
 	if order.TenantID <= 0 {
 		return errors.New("invalid TenantID")
 	}
@@ -108,27 +69,9 @@ func ValidateOrder(order *Order) error {
 	if order.Price < 0 {
 		return errors.New("invalid Price")
 	}
-	if !ValidateWithIMS(order.HubID, order.SKUID) {
+	if !ValidateWithIMS(order.HubID, order.SKUID) { //  check if the hubID and skuID are valid
 		return errors.New("invalid HubID or SKUID")
 	}
-	return nil
-}
-
-func SaveOrder(ctx context.Context, order *Order, collection *mongo.Collection) error {
-	filter := bson.M{
-		"hub_id": order.HubID,
-		"sku_id": order.SKUID,
-	}
-	update := bson.M{"$set": order}
-	opts := options.Update().SetUpsert(true)
-
-	_, err := collection.UpdateOne(ctx, filter, update, opts)
-	if err != nil {
-		logger.Errorf(i18n.Translate(ctx, "Failed to upsert order: %v"), err)
-		return err
-	}
-
-	logger.Infof(i18n.Translate(ctx, "Order upserted successfully for hub_id=%d and sku_id=%d"), order.HubID, order.SKUID)
 	return nil
 }
 
@@ -168,23 +111,32 @@ func DownloadInvalidCSV() error {
 }
 
 func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collection *mongo.Collection) error {
+	client = httpclient.GetHttpClient()
+	// step 1 : create a new CSV reader with the specified options
 	csvReader, err := csv.NewCommonCSV(
-		csv.WithBatchSize(100),
-		csv.WithSource(csv.Local),
-		csv.WithLocalFileInfo(tmpFile),
-		csv.WithHeaderSanitizers(csv.SanitizeAsterisks, csv.SanitizeToLower),
-		csv.WithDataRowSanitizers(csv.SanitizeSpace, csv.SanitizeToLower),
+		csv.WithBatchSize(100),         //Read the CSV in batches of 100 rows at a time
+		csv.WithSource(csv.Local),      // Read from a local file
+		csv.WithLocalFileInfo(tmpFile), // Path of local CSV file
+		csv.WithHeaderSanitizers(
+			csv.SanitizeAsterisks, // Sanitize headers by removing asterisks (*)
+			csv.SanitizeToLower,   // Convert headers to lowercase
+		),
+		csv.WithDataRowSanitizers(
+			csv.SanitizeSpace,   // Remove leading and trailing spaces from data rows
+			csv.SanitizeToLower, // Convert data values to lowercase
+		),
 	)
 	if err != nil {
 		logger.Errorf(i18n.Translate(ctx, "Failed to create CSV reader: %v"), err)
 		return err
 	}
-
+	// step 2 : initialize the CSV reader
 	if err := csvReader.InitializeReader(ctx); err != nil {
 		logger.Errorf(i18n.Translate(ctx, "Failed to initialize CSV reader: %v"), err)
 		return err
 	}
 
+	// step 3 : read the headers from the CSV file
 	headers, err = csvReader.GetHeaders()
 	if err != nil {
 		logger.Errorf(i18n.Translate(ctx, "Failed to read CSV headers: %v"), err)
@@ -192,11 +144,13 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 	}
 	logger.Infof(i18n.Translate(ctx, "CSV Headers: %v"), headers)
 
+	// step 4 : mapping headers/cols to their indices
 	colIdx := make(map[string]int)
 	for i, col := range headers {
 		colIdx[col] = i
 	}
 
+	// reading csv rows in batches
 	for !csvReader.IsEOF() {
 		records, err := csvReader.ReadNextBatch()
 		if err != nil {
@@ -215,7 +169,7 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 			hubID, _ := strconv.ParseInt(row[colIdx["hub_id"]], 10, 64)
 			price, _ := strconv.ParseFloat(row[colIdx["price"]], 64)
 
-			order := Order{
+			order := common.Order{
 				TenantID: tenantID,
 				OrderID:  orderID,
 				SKUID:    skuID,
@@ -234,15 +188,16 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 
 			order.Status = "onHold"
 
-			if err := SaveOrder(ctx, &order, collection); err != nil {
+			if err := kafkaService.SaveOrder(ctx, &order, collection); err != nil {
 				logger.Errorf(i18n.Translate(ctx, "Save failed: %v"), err)
 				invalid = append(invalid, row)
 				continue
 			}
-			PublishOrder(&order)
+			kafkaService.PublishOrderToKafka(&order) // to kafka producer
 		}
 	}
 
+	// step 5 : check if there are any invalid rows
 	if len(invalid) > 0 {
 		logger.Infof(i18n.Translate(ctx, "Downloading Invalid CSV"))
 		if err := DownloadInvalidCSV(); err != nil {

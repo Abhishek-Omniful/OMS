@@ -1,4 +1,4 @@
-package services
+package kafkaService
 
 import (
 	"context"
@@ -7,15 +7,42 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/Abhishek-Omniful/OMS/pkg/helper/common"
+	httpclient "github.com/Abhishek-Omniful/OMS/pkg/integrations/httpClient"
+	webhookService "github.com/Abhishek-Omniful/OMS/pkg/integrations/webhooks"
 	"github.com/omniful/go_commons/http"
 	"github.com/omniful/go_commons/i18n"
 	"github.com/omniful/go_commons/kafka"
 	"github.com/omniful/go_commons/pubsub"
 	"github.com/omniful/go_commons/pubsub/interceptor"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var kafkaConsumer *kafka.ConsumerClient
+var response = &common.ValidationResponse{}
+var client *http.Client
 
+// var ordersCollection = dbService.GetOrdersCollection()
+
+func SaveOrder(ctx context.Context, order *common.Order, collection *mongo.Collection) error {
+	filter := bson.M{
+		"hub_id": order.HubID,
+		"sku_id": order.SKUID,
+	}
+	update := bson.M{"$set": order}
+	opts := options.Update().SetUpsert(true)
+
+	_, err := collection.UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		logger.Errorf(i18n.Translate(ctx, "Failed to upsert order: %v"), err)
+		return err
+	}
+
+	logger.Infof(i18n.Translate(ctx, "Order upserted successfully for hub_id=%d and sku_id=%d"), order.HubID, order.SKUID)
+	return nil
+}
 func CheckInventory(sku_id, hub_id int64, quantity int) bool {
 	ctx := context.Background()
 	req := &http.Request{
@@ -30,13 +57,13 @@ func CheckInventory(sku_id, hub_id int64, quantity int) bool {
 		},
 		Timeout: 5 * time.Second,
 	}
-	var response ValidationResponse
+
 	_, err := client.Get(req, &response)
 	if err != nil {
-		logger.Errorf(i18n.Translate(ctx, "Failed to call IMS validate API: %v"), err)
+		logger.Errorf(i18n.Translate(ctx, "Failed to call IMS inventory check API: %v"), err)
 		return false
 	}
-	logger.Infof(i18n.Translate(ctx, "Response from IMS validate API: %v"), response)
+	logger.Infof(i18n.Translate(ctx, "Response from IMS inventory check API: %v"), response)
 	return response.IsValid
 }
 
@@ -46,7 +73,7 @@ type MessageHandler struct{}
 func (h *MessageHandler) Handle(ctx context.Context, msg *pubsub.Message) error {
 	logger.Infof(i18n.Translate(ctx, "Handling message from topic: %s, key: %s, value: %s"), msg.Topic, msg.Key, msg.Value)
 
-	var order Order
+	var order common.Order
 	if err := json.Unmarshal(msg.Value, &order); err != nil {
 		logger.Errorf(i18n.Translate(ctx, "Failed to unmarshal message: %v"), err)
 		return err
@@ -65,10 +92,10 @@ func (h *MessageHandler) Handle(ctx context.Context, msg *pubsub.Message) error 
 	logger.Infof(i18n.Translate(ctx, "Processing order: %+v"), order)
 
 	order.Status = "new Order"
-	err := SaveOrder(ctx, &order, OrdersCollection)
+	err := SaveOrder(ctx, &order, ordersCollection)
 
 	logger.Infof(i18n.Translate(ctx, "Notifying the tenant about order creation for TenantID=%d"), order.TenantID)
-	SendNotification(order.TenantID, order)
+	webhookService.SendNotification(order.TenantID, order)
 
 	if err != nil {
 		logger.Errorf(i18n.Translate(ctx, "Failed to save order: %v"), err)
@@ -84,6 +111,7 @@ func (h *MessageHandler) Process(ctx context.Context, msg *pubsub.Message) error
 
 func InitKafkaConsumer() {
 	ctx := context.Background()
+	client = httpclient.GetHttpClient()
 	logger.Infof(i18n.Translate(ctx, "Initializing Kafka consumer..."))
 
 	kafkaConsumer = kafka.NewConsumer(

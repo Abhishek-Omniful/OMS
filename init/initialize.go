@@ -6,24 +6,32 @@ import (
 	"time"
 
 	"github.com/Abhishek-Omniful/OMS/mycontext"
-	"github.com/Abhishek-Omniful/OMS/pkg/services"
+	dbService "github.com/Abhishek-Omniful/OMS/pkg/integrations/db"
+	httpclient "github.com/Abhishek-Omniful/OMS/pkg/integrations/httpClient"
+	kafkaService "github.com/Abhishek-Omniful/OMS/pkg/integrations/kafka"
+	redisService "github.com/Abhishek-Omniful/OMS/pkg/integrations/redis"
+	s3Service "github.com/Abhishek-Omniful/OMS/pkg/integrations/s3"
+	sqsService "github.com/Abhishek-Omniful/OMS/pkg/integrations/sqs"
 )
 
 func init() {
 	ctx := mycontext.GetContext()
-	services.ConnectDB()
-	services.ConnectS3()
-	services.SQSInit()
-	newQueue := services.GetSqs()
-	services.PublisherInit(newQueue)
-	services.InitConsumer()
-	services.StartConsumer(ctx)
+	dbService.ConnectDB()
+	httpclient.InitHttpClient()
+	s3Service.ConnectS3()
 
-	go services.InitKafkaConsumer()
+	go kafkaService.InitKafkaConsumer()
 	time.Sleep(3 * time.Second)
-	services.InitKafkaProducer()
-	services.ConnectRedis()
-	services.OrderRetryWorker()
+	kafkaService.InitKafkaProducer()
+	kafkaService.OrderRetryWorker()
+	
+	redisService.ConnectRedis()
+	sqsService.SQSInit()
+	newQueue := sqsService.GetSqs()
+	sqsService.InitSqsPublisher(newQueue)
+	sqsService.InitSqsConsumer()
+	sqsService.StartConsumer(ctx)
+
 }
 
 func Initialize() {

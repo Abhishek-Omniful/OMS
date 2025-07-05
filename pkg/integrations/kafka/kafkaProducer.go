@@ -1,10 +1,11 @@
-package services
+package kafkaService
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 
+	"github.com/Abhishek-Omniful/OMS/pkg/helper/common"
 	"github.com/omniful/go_commons/i18n"
 	"github.com/omniful/go_commons/kafka"
 	"github.com/omniful/go_commons/pubsub"
@@ -27,7 +28,7 @@ func GetKafkaProducer() *kafka.ProducerClient {
 	return kafkaProducer
 }
 
-func PublishOrder(order *Order) {
+func PublishOrderToKafka(order *common.Order) {
 	ctx := context.WithValue(context.Background(), "request_id", fmt.Sprintf("req-%d", order.OrderID))
 
 	jsonBytes, err := json.Marshal(order)

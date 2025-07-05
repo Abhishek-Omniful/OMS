@@ -1,4 +1,4 @@
-package services
+package sqsService
 
 import (
 	"github.com/Abhishek-Omniful/OMS/mycontext"
