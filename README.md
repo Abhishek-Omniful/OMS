@@ -1,6 +1,53 @@
+<p align="center">
+  <img src="resources/OMS%20-%20IMS%20WorkFlow%20Diagram.png" alt="OMS-IMS Workflow Diagram" width="100%">
+</p>
+
 # Order Management System (OMS)
 
 This microservice-based Order Management System handles order ingestion, validation, and processing using AWS S3, SQS, Kafka, MongoDB, and internal IMS services.
+
+---
+
+## 📁 Project Directory Structure
+
+OMS/
+├── configs/
+│ └── config.yaml
+├── init/
+│ └── initialize.go
+├── localstack/
+├── mycontext/
+│ └── mycontext.go
+├── pkg/
+│ ├── controllers/
+│ ├── helper/
+│ │ ├── common/
+│ │ ├── csvProcessor/
+│ │ └── getLocalCSV/
+│ ├── integrations/
+│ │ ├── db/
+│ │ ├── httpClient/
+│ │ ├── kafka/
+│ │ ├── redis/
+│ │ ├── s3/
+│ │ ├── sqs/
+│ │ └── webhooks/
+│ ├── middleware/
+│ ├── models/
+│ └── router/
+├── public/
+│ └── invalid_orders_20250705_063148.csv
+├── resources/
+│ ├── OMS - IMS WorkFlow Diagram.png
+│ └── orders.csv
+├── docker-compose.yaml
+├── go.mod
+├── go.sum
+├── main.go
+└── README.md
+
+
+---
 
 ## 🚀 Workflow Overview
 
@@ -41,12 +88,12 @@ This microservice-based Order Management System handles order ingestion, validat
 
 ## 📦 Tech Stack
 
-| Component     | Technology                 |
-|--------------|----------------------------|
-| Language      | Go (Golang)               |
-| Database      | MongoDB                   |
-| Messaging     | AWS SQS, Kafka            |
-| Storage       | AWS S3                    |
+| Component     | Technology     |
+|---------------|----------------|
+| Language      | Go (Golang)    |
+| Database      | MongoDB        |
+| Messaging     | AWS SQS, Kafka |
+| Storage       | AWS S3         |
 
 ---
 
