@@ -10,9 +10,7 @@ import (
 	"github.com/omniful/go_commons/i18n"
 )
 
-
-
-func StoreInS3(s *StoreCSV) error {
+var StoreInS3 = func(s *StoreCSV) error {
 	filepath := s.FilePath                         // file path user provided
 	fileBytes := getlocalcsv.GetLocalCSV(filepath) //read file from given path and store in fileBytes
 

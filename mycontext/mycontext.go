@@ -2,6 +2,7 @@ package mycontext
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/omniful/go_commons/config"
@@ -12,6 +13,10 @@ import (
 var ctx context.Context
 
 func init() {
+
+	if os.Getenv("CONFIG_SOURCE") == "test" {
+		return // Skip config during test
+	}
 	// Mandatory to call config.Init() before using the context
 	err := config.Init(time.Second * 10) // Load config file (yaml)
 	if err != nil {

@@ -7,9 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-
-
-func CreateWebhook(req *Webhook) error {
+var CreateWebhook = func(req *Webhook) error {
 	if req.URL == "" || req.TenantID <= 0 {
 		return errors.New(i18n.Translate(ctx, "invalid webhook request"))
 	}
@@ -29,7 +27,7 @@ func CreateWebhook(req *Webhook) error {
 	return nil
 }
 
-func ListWebhooks() ([]Webhook, error) {
+var ListWebhooks = func() ([]Webhook, error) {
 	//bson.M is used to build queries or documents for MongoDB in Go.
 	//it stands for map[string]interface{}
 	//bson.M{"status": "active"}

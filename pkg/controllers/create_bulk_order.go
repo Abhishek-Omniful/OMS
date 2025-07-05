@@ -23,8 +23,6 @@ func CreateBulkOrder(c *gin.Context) {
 		})
 		return
 	}
-	logger.Infof(i18n.Translate(c, "Valid Path to s3 !"))
-	logger.Infof(i18n.Translate(c, "Pushing to sqs !"))
 
 	c.JSON(200, gin.H{
 		i18n.Translate(c, "message"): i18n.Translate(c, "Valid Path to s3 !"),

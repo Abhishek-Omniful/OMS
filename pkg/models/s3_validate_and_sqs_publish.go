@@ -13,7 +13,8 @@ import (
 
 var logger = log.DefaultLogger()
 
-func ValidateS3Path_PushToSQS(req *BulkOrderRequest) error {
+// func ValidateS3Path_PushToSQS(req *BulkOrderRequest) error {
+var ValidateS3Path_PushToSQS = func(req *BulkOrderRequest) error {
 	logger.Infof(i18n.Translate(ctx, "Validating S3 path:"))
 	filePath := req.FilePath
 

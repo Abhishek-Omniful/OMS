@@ -33,10 +33,6 @@ func ValidateWithIMS(hubID, skuID int64) bool {
 		},
 		Timeout: 5 * time.Second,
 	}
-	if client == nil {
-		logger.Errorf(i18n.Translate(ctx, "HTTP client is nil — did you forget to initialize it?"))
-		return false
-	}
 	_, err := client.Get(req, &response)
 
 	if err != nil {
