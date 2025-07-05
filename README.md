@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="resources/OMS%20-%20IMS%20WorkFlow%20Diagram.png" alt="OMS-IMS Workflow Diagram" width="100%">
+  <img src="resources/OMS-IMS%20WorkFlow%20Diagram.png" alt="OMS-IMS Workflow Diagram" width="100%">
 </p>
+
+
 
 # Order Management System (OMS)
 
@@ -10,36 +12,37 @@ This microservice-based Order Management System handles order ingestion, validat
 
 ## 📁 Project Directory Structure
 
+```text
 OMS/
 ├── configs/
-│ └── config.yaml
+│   └── config.yaml
 ├── init/
-│ └── initialize.go
+│   └── initialize.go
 ├── localstack/
 ├── mycontext/
-│ └── mycontext.go
+│   └── mycontext.go
 ├── pkg/
-│ ├── controllers/
-│ ├── helper/
-│ │ ├── common/
-│ │ ├── csvProcessor/
-│ │ └── getLocalCSV/
-│ ├── integrations/
-│ │ ├── db/
-│ │ ├── httpClient/
-│ │ ├── kafka/
-│ │ ├── redis/
-│ │ ├── s3/
-│ │ ├── sqs/
-│ │ └── webhooks/
-│ ├── middleware/
-│ ├── models/
-│ └── router/
+│   ├── controllers/
+│   ├── helper/
+│   │   ├── common/
+│   │   ├── csvProcessor/
+│   │   └── getLocalCSV/
+│   ├── integrations/
+│   │   ├── db/
+│   │   ├── httpClient/
+│   │   ├── kafka/
+│   │   ├── redis/
+│   │   ├── s3/
+│   │   ├── sqs/
+│   │   └── webhooks/
+│   ├── middleware/
+│   ├── models/
+│   └── router/
 ├── public/
-│ └── invalid_orders_20250705_063148.csv
+│   └── invalid_orders_20250705_063148.csv
 ├── resources/
-│ ├── OMS - IMS WorkFlow Diagram.png
-│ └── orders.csv
+│   ├── OMS - IMS WorkFlow Diagram.png
+│   └── orders.csv
 ├── docker-compose.yaml
 ├── go.mod
 ├── go.sum
