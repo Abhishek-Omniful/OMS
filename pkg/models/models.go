@@ -9,7 +9,7 @@ import (
 	sqsService "github.com/Abhishek-Omniful/OMS/pkg/integrations/sqs"
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/omniful/go_commons/sqs"
-	"go.mongodb.org/mongo-driver/mongo"
+	// "go.mongodb.org/mongo-driver/mongo"
 )
 
 type BulkOrderRequest struct {
@@ -28,12 +28,14 @@ type Webhook struct {
 var err error
 var client *awsS3.Client
 var ctx context.Context
-var webhookCollection *mongo.Collection
+
+// var webhookCollection *mongo.Collection
+var webhookCollection WebhookStore
 var sqsPublisher *sqs.Publisher
 
 func init() {
 	client = s3Service.GetS3Client()
 	ctx = mycontext.GetContext()
-	webhookCollection = dbService.GetWebhookCollection()
+	webhookCollection = &MongoWebhookStore{Collection: dbService.GetWebhookCollection()}
 	sqsPublisher = sqsService.GetSQSPublisher()
 }

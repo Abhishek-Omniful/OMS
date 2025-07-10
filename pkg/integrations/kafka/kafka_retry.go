@@ -47,11 +47,11 @@ func ProcessOnHoldOrders() {
 }
 func GetOnHoldOrders(ctx context.Context) ([]common.Order, error) {
 	var orders []common.Order
-
+    
 	if ordersCollection == nil {
 		return nil, fmt.Errorf("ordersCollection is nil. Ensure MongoDB is properly initialized")
 	}
-
+    
 	cursor, err := ordersCollection.Find(ctx, bson.M{"status": "on_hold"})
 	if err != nil {
 		return nil, err

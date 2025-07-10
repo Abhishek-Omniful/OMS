@@ -24,7 +24,7 @@ var headers csv.Headers
 var logger = log.DefaultLogger()
 var response = &common.ValidationResponse{}
 
-func ValidateWithIMS(hubID, skuID int64) bool {
+var ValidateWithIMS = func(hubID, skuID int64) bool {
 	ctx := mycontext.GetContext()
 	req := &http.Request{
 		Url: fmt.Sprintf("/api/v1/validators/validate_order/%d/%d", skuID, hubID),
@@ -69,6 +69,27 @@ func ValidateOrder(order *common.Order) error {
 		return errors.New("invalid HubID or SKUID")
 	}
 	return nil
+}
+
+func constructOrder(row []string, colIdx map[string]int) *common.Order {
+	tenantID, _ := strconv.ParseInt(row[colIdx["tenant_id"]], 10, 64)
+	orderID, _ := strconv.ParseInt(row[colIdx["order_id"]], 10, 64)
+	skuID, _ := strconv.ParseInt(row[colIdx["sku_id"]], 10, 64)
+	quantity, _ := strconv.Atoi(row[colIdx["quantity"]])
+	sellerID, _ := strconv.ParseInt(row[colIdx["seller_id"]], 10, 64)
+	hubID, _ := strconv.ParseInt(row[colIdx["hub_id"]], 10, 64)
+	price, _ := strconv.ParseFloat(row[colIdx["price"]], 64)
+
+	order := common.Order{
+		TenantID: tenantID,
+		OrderID:  orderID,
+		SKUID:    skuID,
+		Quantity: quantity,
+		SellerID: sellerID,
+		HubID:    hubID,
+		Price:    price,
+	}
+	return &order
 }
 
 func DownloadInvalidCSV() error {
@@ -156,24 +177,7 @@ func ParseCSV(tmpFile string, ctx context.Context, logger *log.Logger, collectio
 
 		for _, row := range records {
 			logger.Infof(i18n.Translate(ctx, "CSV Row: %v"), row)
-
-			tenantID, _ := strconv.ParseInt(row[colIdx["tenant_id"]], 10, 64)
-			orderID, _ := strconv.ParseInt(row[colIdx["order_id"]], 10, 64)
-			skuID, _ := strconv.ParseInt(row[colIdx["sku_id"]], 10, 64)
-			quantity, _ := strconv.Atoi(row[colIdx["quantity"]])
-			sellerID, _ := strconv.ParseInt(row[colIdx["seller_id"]], 10, 64)
-			hubID, _ := strconv.ParseInt(row[colIdx["hub_id"]], 10, 64)
-			price, _ := strconv.ParseFloat(row[colIdx["price"]], 64)
-
-			order := common.Order{
-				TenantID: tenantID,
-				OrderID:  orderID,
-				SKUID:    skuID,
-				Quantity: quantity,
-				SellerID: sellerID,
-				HubID:    hubID,
-				Price:    price,
-			}
+			order := *constructOrder(row, colIdx) // construct order from row and colIdx
 
 			if err := ValidateOrder(&order); err != nil {
 				logger.Warnf(i18n.Translate(ctx, "Validation failed: %v"), err)

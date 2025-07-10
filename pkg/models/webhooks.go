@@ -5,7 +5,50 @@ import (
 
 	"github.com/omniful/go_commons/i18n"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+type WebhookStore interface {
+	InsertOne(interface{}, interface{}) (*mongo.InsertOneResult, error)
+	Find(interface{}, interface{}) (MongoCursor, error)
+}
+
+type MongoCursor interface {
+	All(interface{}) error
+	Close(interface{}) error
+}
+
+type MongoWebhookStore struct {
+	Collection *mongo.Collection
+}
+
+type MongoCursorWrapper struct {
+	*mongo.Cursor
+}
+
+func (m *MongoWebhookStore) InsertOne(_, doc interface{}) (*mongo.InsertOneResult, error) {
+	return m.Collection.InsertOne(ctx, doc)
+}
+
+func (m *MongoWebhookStore) Find(_, filter interface{}) (MongoCursor, error) {
+	cur, err := m.Collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	return &MongoCursorWrapper{cur}, nil
+}
+
+func (c *MongoCursorWrapper) All(out interface{}) error {
+	return c.Cursor.All(ctx, out)
+}
+
+func (c *MongoCursorWrapper) Close(_ interface{}) error {
+	return c.Cursor.Close(ctx)
+}
+
+func SetWebhookCollection(coll WebhookStore) {
+	webhookCollection = coll
+}
 
 var CreateWebhook = func(req *Webhook) error {
 	if req.URL == "" || req.TenantID <= 0 {
@@ -39,11 +82,12 @@ var ListWebhooks = func() ([]Webhook, error) {
 		logger.Error(i18n.Translate(ctx, "Failed to list webhooks:"), i18n.Translate(ctx, err.Error()))
 		return nil, err
 	}
+
 	defer cursor.Close(ctx)
 
 	var webhooks []Webhook
 
-	if err := cursor.All(ctx, &webhooks); err != nil {
+	if err := cursor.All(&webhooks); err != nil {
 		logger.Error(i18n.Translate(ctx, "Failed to decode webhooks:"), i18n.Translate(ctx, err.Error()))
 		return nil, err
 	}

@@ -15,7 +15,11 @@ func GetLocalCSV(filepath string) []byte {
 
 	fileBytes, err := os.ReadFile(filepath)
 	if err != nil {
-		logger.Errorf(i18n.Translate(ctx, "Failed to read local CSV file: %v"), err)
+		if ctx != nil {
+			logger.Errorf(i18n.Translate(ctx, "Failed to read local CSV file: %v"), err)
+		} else {
+			logger.Errorf("Failed to read local CSV file: %v", err)
+		}
 		return nil
 	}
 	return fileBytes
